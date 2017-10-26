@@ -1,5 +1,5 @@
 Package: learnr.tidyeval
-Title: Tutorial for Tidyeval system
+Title: Tutorial for Tidyeval Framework
 Version: 0.0.0.9000
 Authors@R: c(
   person(given = "Ian", family = "Lyttle", email = "ian.lyttle@schneider-electric.com", role = c("aut", "cre")),
@@ -14,3 +14,6 @@ LazyData: true
 URL: https://github.com/ijlyttle/learnr.tidyeval
 BugReports: https://github.com/ijlyttle/learnr.tidyeval/issues
 RoxygenNote: 6.0.1
+Imports: 
+    rlang (>= 0.1.2),
+    magrittr

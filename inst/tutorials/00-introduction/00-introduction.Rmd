@@ -1,0 +1,23 @@
+---
+title: Introduction
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r}
+library("learnr")
+library("glue")
+library("learnr.tidyeval")
+```
+
+Hi there.
+
+```{r glue, exercise=TRUE}
+name <- "put your name here"
+glue::glue("May name is name")
+```
+
+```{rr number, exercise=TRUE}
+number()
+```
+
