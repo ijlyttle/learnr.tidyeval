@@ -1,11 +1,13 @@
 Package: learnr.tidyeval
-Title: What the Package Does (one line, title case)
+Title: Tutorial for Tidyeval system
 Version: 0.0.0.9000
 Authors@R: c(
   person(given = "Ian", family = "Lyttle", email = "ian.lyttle@schneider-electric.com", role = c("aut", "cre"))
   )
-Description: What the package does (one paragraph).
-Depends: R (>= 3.4.2)
+Description: This is an experiment to try to teach some tidyeval concepts, and use the learnr package.
+Depends: R (>= 3.4.1)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
+URL: https://github.com/ijlyttle/learnr.tidyeval
+BugReports: https://github.com/ijlyttle/learnr.tidyeval/issues
