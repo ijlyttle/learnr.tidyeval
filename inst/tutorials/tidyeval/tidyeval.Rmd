@@ -19,22 +19,30 @@ tbl_mtcars <- as_tibble(mtcars)
 
 ## Introduction
 
-A few introductory words and a disclaimer.
-
-Confession: for me, this tutorial is an exercise in self-help. I struggled to wrap my head around non-standard evaluation
-
+Confession: for me, this tutorial is an exercise in self-help. For years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I _thought_ I understood it, I _seemed_ to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here's a receipt:
 
 <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, ...)</p>&mdash; Ian Lyttle (@ijlyttle) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
+At first glance, tidyeval can seem just as mysterious. Upon further inspection, tidyeval is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones. At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.
+
+Of course, none of this material is possible without the work done by Lionel Henry and Hadley Wickham, who developed the tidyeval framework. Indeed, the examples shown here are adapted from their sources:
+
+- [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
+- [Tidy evaluation](http://rlang.tidyverse.org/articles/tidy-evaluation.html)
+- [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
+
+I am particularly impressed with the "Erratum" article, as it explains very well the factors that went into a design choice, as well as the factors that went into the decision to modify that choice.
+
+As you go through this tutorial, please keep in mind that I am an imperfect interpeter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will recitify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)).
 
 ## What motivates tidyeval?
 
 
 
-## Tidyeval concepts
+## Principles and concepts
 
-## Using functions that use tidteval
+## Using functions that use tidyeval
 
 ## Writing functions that use tidyeval
 
