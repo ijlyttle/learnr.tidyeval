@@ -1,0 +1,80 @@
+---
+title: Tidyeval
+author: "Ian Lyttle, adapted from material by Lionel Henry and Hadley Wickham"
+output: 
+  learnr::tutorial:
+    df_print: tibble
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library("learnr")
+library("dplyr")
+library("tibble")
+library("glue")
+library("learnr.tidyeval")
+
+tbl_mtcars <- as_tibble(mtcars)
+```
+
+## Introduction
+
+A few introductory words and a disclaimer.
+
+Confession: for me, this tutorial is an exercise in self-help. I struggled to wrap my head around non-standard evaluation
+
+
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, ...)</p>&mdash; Ian Lyttle (@ijlyttle) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+
+## What motivates tidyeval?
+
+
+
+## Tidyeval concepts
+
+## Using functions that use tidteval
+
+## Writing functions that use tidyeval
+
+## More stuff
+
+
+## Introduction
+
+This is going to start out as an adaptation of the __dplyr__ [vignette on programming using tidyeval](http://dplyr.tidyverse.org/articles/programming.html).  
+
+You are probably used to **dplyr** code that looks like this:
+
+```{r tbl_mtcars-nse, exercise=TRUE}
+tbl_mtcars %>%
+  filter(cyl == 4, gear == 3)
+```
+
+Which does the same thing as: 
+
+```{r tbl_mtcars-se, exercise=TRUE}
+tbl_mtcars[tbl_mtcars$cyl == 4 & tbl_mtcars$gear == 3]
+```
+
+- Operations on data frames
+
+```{r does-not-work, exercise=TRUE}
+greet <- function(name) {
+  "How do you do, name?"
+}
+
+greet("your name here")
+```
+
+look here
+
+```{r glue2, exercise=TRUE}
+greet <- function(name) {
+  glue::glue("How do you do, {name}?")
+}
+
+greet("your name here")
+```
+

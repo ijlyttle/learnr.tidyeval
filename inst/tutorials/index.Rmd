@@ -1,6 +1,0 @@
----
-title: readme
-output: html_document
----
-
-[introduction](00-introduction/00-introduction.Rmd)

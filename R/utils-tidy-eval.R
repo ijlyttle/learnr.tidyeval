@@ -12,10 +12,15 @@
 #' @aliases          quo quos enquo sym syms ensym expr exprs enexpr
 #' @importFrom rlang quo quos enquo
 #' @export           quo quos enquo
-#' @importFrom rlang sym syms ensym
-#' @export           sym syms ensym
+# @importFrom rlang sym syms ensym
+# @export           sym syms ensym
+#' @importFrom rlang sym syms
+#' @export           sym syms
 #' @importFrom rlang expr exprs enexpr
 #' @export           expr exprs enexpr
+#'
+#' @importFrom rlang UQ UQS !! !!!
+#'
 NULL
 
 # Flag inline helpers as global variables so R CMD check doesn't warn
