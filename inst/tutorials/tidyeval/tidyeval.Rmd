@@ -40,9 +40,6 @@ Confession: for me, this tutorial is an exercise in self-help. I struggled to wr
 
 ## More stuff
 
-
-## Introduction
-
 This is going to start out as an adaptation of the __dplyr__ [vignette on programming using tidyeval](http://dplyr.tidyverse.org/articles/programming.html).  
 
 You are probably used to **dplyr** code that looks like this:
