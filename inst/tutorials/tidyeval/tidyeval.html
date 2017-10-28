@@ -47,7 +47,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 
 <div id="section-introduction" class="section level2">
 <h2>Introduction</h2>
-<p>Confession: for me, this tutorial is an exercise in self-help. For years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I <em>thought</em> I understood it, I <em>seemed</em> to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here’s a receipt:</p>
+<p>Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I <em>thought</em> I understood it, I <em>seemed</em> to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here’s a receipt:</p>
 <blockquote class="twitter-tweet" data-lang="en">
 <p lang="en" dir="ltr">
 Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, …)
@@ -55,42 +55,134 @@ Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%
 — Ian Lyttle (<span class="citation">@ijlyttle</span>) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a>
 </blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-<p>At first glance, tidyeval can seem just as mysterious. Upon further inspection, tidyeval is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones. At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.</p>
+<p>At first glance, tidyeval can seem just as mysterious - a new way to deal with non-standard evaluation. I came to appreciate that tidyeval is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones. At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.</p>
 <p>Of course, none of this material is possible without the work done by Lionel Henry and Hadley Wickham, who developed the tidyeval framework. Indeed, the examples shown here are adapted from their sources:</p>
 <ul>
 <li><a href="http://dplyr.tidyverse.org/articles/programming.html">Programming with dplyr</a></li>
 <li><a href="http://rlang.tidyverse.org/articles/tidy-evaluation.html">Tidy evaluation</a></li>
 <li><a href="https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/">Erratum tidyr 0.7.0</a></li>
 </ul>
-<p>I am particularly impressed with the “Erratum” article, as it explains very well the factors that went into a design choice, as well as the factors that went into the decision to modify that design.</p>
+<p>I am particularly impressed with the “Erratum” article, as it explains very well the factors that went into a design choice, as well as the factors that went into the decision to modify that choice.</p>
+<p>The goal of this tutorial is to make it easier for you to tackle these references.</p>
 <p>As you go through this tutorial, please keep in mind that I am an imperfect interpeter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will recitify as they become apparent (<a href="https://github.com/ijlyttle/learnr.tidyeval/issues">issue page</a>).</p>
 </div>
 <div id="section-what-motivates-tidyeval" class="section level2">
 <h2>What motivates tidyeval?</h2>
+<div id="section-advantages" class="section level3">
+<h3>Advantages</h3>
+<p>You are probably used to <strong>dplyr</strong> code that looks like this:</p>
+<pre class="r"><code>filter(starwars, species == &quot;Droid&quot;)</code></pre>
+<pre><code>#&gt; # A tibble: 5 x 13
+#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
+#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
+#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
+#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
+#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
+#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
+#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+<p>This does the same thing as base R code:</p>
+<pre class="r"><code>starwars[starwars$species == &quot;Droid&quot; &amp;  !is.na(starwars$species), ]</code></pre>
+<pre><code>#&gt; # A tibble: 5 x 13
+#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
+#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
+#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
+#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
+#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
+#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
+#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+<p>The dplyr code is more concise - you don’t have to repeat the name of the data frame, or specify that you don’t want <code>NA</code> values.</p>
+<p>As well, you may have used dplyr to access databases. If the <code>starwars</code> tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression <code>species == &quot;Droid&quot;</code> into SQL to obtain the same result. Tidyeval is the framework that dplyr uses to adapt the expression to the situation, so that “it just works”.</p>
+</div>
+<div id="section-things-to-keep-in-mind" class="section level3">
+<h3>Things to keep in mind</h3>
+<p>However, as <a href="https://youtu.be/qL1fBDQXSy8?t=1m40s">Jar Jar discovered</a>, there is no such thing as a free lunch. There are a couple things to be mindful of.</p>
+<div id="section-referential-transparency" class="section level4">
+<h4>Referential transparency</h4>
+<p>Most arguments to dplyr functions are not <a href="https://en.wikipedia.org/wiki/Referential_transparency"><strong>referentially transparent</strong></a>. You can’t replace an argument with a seemingly-equivalent argument that you have defined elsewhere.</p>
+<div id="section-your-turn" class="section level5">
+<h5>Your turn</h5>
+<p>Let’s look again at our earlier example:</p>
+<pre class="r"><code>filter(starwars, species == &quot;Droid&quot;)</code></pre>
+<pre><code>#&gt; # A tibble: 5 x 13
+#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
+#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
+#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
+#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
+#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
+#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
+#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+<p>Try the following substitutions and see what happens:</p>
+<pre class="r"><code>my_var &lt;- species
+filter(starwars, my_var == &quot;Droid&quot;)
+
+my_var &lt;- &quot;species&quot;
+filter(starwars, my_var == &quot;Droid&quot;)</code></pre>
+<div class="tutorial-exercise" data-label="starwars-my_var" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>filter(starwars, species == &quot;Droid&quot;)</code></pre>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
+</div>
+<p>As you see, neither of these substitutions works how we expect - so it is not obvious how to call dplyr functions without hard-coding everything.</p>
+</div>
+</div>
+<div id="section-ambiguity" class="section level4">
+<h4>Ambiguity</h4>
+<p>As well, dplyr evaluates expressions ambiguously. As we will see, the code <code>filter(df, x == y)</code> can be interpreted differently depending on the data and the context:</p>
+<pre class="r"><code>df[df$x == df$y, ]
+df[df$x == y, ]
+df[x == df$y, ]
+df[x == y, ]</code></pre>
+<p>If the “wrong” thing happens when you are working interactively, you can see that there is a problem and correct it. If the “wrong” thing happens when you are calling a function (from a function, from a packge, …), it can be nearly impossible to figure out what went wrong, let alone fix it.</p>
+<div id="section-your-turn-1" class="section level5">
+<h5>Your turn</h5>
+<p>Let’s say we want to look at the Star Wars characters, comparing eye-color and hair-color.</p>
+<p>In the code-block below:</p>
+<ol style="list-style-type: decimal">
+<li>Run the code as-is.</li>
+<li>Uncomment the <code>eye_color == &quot;black&quot;</code> line, rerun.</li>
+<li>Uncomment the <code>my_color == &quot;black&quot;</code> line, change the filter expression to <code>hair_color == my_color</code>, rerun.</li>
+<li>Fiddle around with other varaibles and filter expressions.</li>
+</ol>
+<p>What can you tell about the rules that <code>dplyr::filter()</code> uses to evaluate an expression?</p>
+<div class="tutorial-exercise" data-label="starwars-eye-hair" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code># eye_color &lt;- &quot;black&quot;
+# my_color &lt;- &quot;black&quot;   
+filter(starwars, hair_color == eye_color)</code></pre>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
+</div>
+</div>
+</div>
+</div>
+<div id="section-summary" class="section level3">
+<h3>Summary</h3>
+<p>Tidyeval provides a set of rules for the default evaluation of expressions, and a set of tools that let you change that default whenever you need to. For people who write functions and people who use those functions, tidyeval provides a framework that allows both sets of people be confident that a function will do what they expect it to do.</p>
+<p>In the next few sections, we will discuss the principles and concepts of tidyeval, then show how you can use these to call functions that use tidyeval (like those in dplyr). Finally, we will discuss how you can write functions that use the tidyeval framework.</p>
+</div>
 </div>
 <div id="section-principles-and-concepts" class="section level2">
 <h2>Principles and concepts</h2>
+<p>This may be a good time to recall the <a href="https://adv-r.hadley.nz/functions.html#all-calls">famous quote from <em>Advanced R</em></a>:</p>
+<blockquote>
+<p>“To understand computations in R, two slogans are helpful:</p>
+<p>Everything that exists is an object. Everything that happens is a function call.&quot; — John Chambers</p>
+</blockquote>
+<div id="section-expressions-values-and-symbols-oh-my" class="section level3">
+<h3>Expressions, values, and symbols (oh my!)</h3>
+</div>
 </div>
 <div id="section-using-functions-that-use-tidyeval" class="section level2">
 <h2>Using functions that use tidyeval</h2>
+<div id="section-selecty-functions" class="section level3">
+<h3>“selecty” functions</h3>
+</div>
 </div>
 <div id="section-writing-functions-that-use-tidyeval" class="section level2">
 <h2>Writing functions that use tidyeval</h2>
 </div>
 <div id="section-more-stuff" class="section level2">
 <h2>More stuff</h2>
-<p>This is going to start out as an adaptation of the <strong>dplyr</strong> <a href="http://dplyr.tidyverse.org/articles/programming.html">vignette on programming using tidyeval</a>.</p>
-<p>You are probably used to <strong>dplyr</strong> code that looks like this:</p>
-<div class="tutorial-exercise" data-label="tbl_mtcars-nse" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>tbl_mtcars %&gt;%
-  filter(cyl == 4, gear == 3)</code></pre>
-<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
-</div>
-<p>Which does the same thing as:</p>
-<div class="tutorial-exercise" data-label="tbl_mtcars-se" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>tbl_mtcars[tbl_mtcars$cyl == 4 &amp; tbl_mtcars$gear == 3]</code></pre>
-<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
-</div>
 <ul>
 <li>Operations on data frames</li>
 </ul>
@@ -119,7 +211,8 @@ library("tibble")
 library("glue")
 library("learnr.tidyeval")
 
-tbl_mtcars <- as_tibble(mtcars)
+options(width = 100)
+knitr::opts_chunk$set(comment = "#>")
 </script>
  
 <script type="application/shiny-prerendered" data-context="server">
@@ -127,16 +220,16 @@ learnr:::register_http_handlers(session, metadata = NULL)
 </script>
  
 <script type="application/shiny-prerendered" data-context="server">
-`tutorial-exercise-tbl_mtcars-nse-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-tbl_mtcars-nse-code-editor`)), session)
-output$`tutorial-exercise-tbl_mtcars-nse-output` <- renderUI({
-  `tutorial-exercise-tbl_mtcars-nse-result`()
+`tutorial-exercise-starwars-my_var-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-starwars-my_var-code-editor`)), session)
+output$`tutorial-exercise-starwars-my_var-output` <- renderUI({
+  `tutorial-exercise-starwars-my_var-result`()
 })
 </script>
  
 <script type="application/shiny-prerendered" data-context="server">
-`tutorial-exercise-tbl_mtcars-se-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-tbl_mtcars-se-code-editor`)), session)
-output$`tutorial-exercise-tbl_mtcars-se-output` <- renderUI({
-  `tutorial-exercise-tbl_mtcars-se-result`()
+`tutorial-exercise-starwars-eye-hair-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-starwars-eye-hair-code-editor`)), session)
+output$`tutorial-exercise-starwars-eye-hair-output` <- renderUI({
+  `tutorial-exercise-starwars-eye-hair-result`()
 })
 </script>
  
