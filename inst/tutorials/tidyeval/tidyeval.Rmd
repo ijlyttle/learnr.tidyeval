@@ -131,14 +131,28 @@ In the next few sections, we will discuss the principles and concepts of tidyeva
 
 ## Principles and concepts
 
-quoting example
+We can demonstrate tidyeval's central idea using strings. Let's say that we want to compose a string to include a name that we specify elsewhere. This warm-up example is lifted from the [dplyr programming vignette](http://dplyr.tidyverse.org/articles/programming.html).
 
-tidyverse functions focus on data frames
+##### Your turn
 
-data first, then context.
+In the excercise below, you will see that our first attempt is clearly doomed. Comment and un-comment the following lines to see some approaches we can use to compose the string that we expect. Maybe try some compoistions of your own...
 
+In your own words, why does the first attempt fail, while the other two succeed?
 
+```{r warm-up, exercise=TRUE}
+name <- "not Hadley"
 
+"How do you do, name?"
+
+# paste0("How do you do, ", name, "?")
+
+# library("glue")
+# glue("How do you do, {name}?")
+```
+
+In the first attempt, we cannot evaluate the name because it is "quoted": the string itself is simply a value. In the second attempt, we build up the string piece-by-piece: `paste0()` evaluates `name` within the larger set of expressions. In the third attempt we use the __glue__ package, which allows us to compose a string by "unquoting": `{name}` is replaced with value of `name`, using the context from which `glue()` is called.
+
+It may be useful to establish some vocabulary terms: values, expressions, and symbols.
 
 ### Values, expressions, and symbols (oh my!)
 
@@ -150,19 +164,70 @@ This may be a good time to recall the [famous quote from _Advanced R_](https://a
 > Everything that happens is a function call."
 > — John Chambers
 
-In this section, we will go over three important kinds of objects.
+Here, we will go over three important kinds of objects in the tideval framework.
 
-We are talking about using filter on local data frames, database backends may work a little differently.
+A __value__ is something that has a defined, well, value. Types of values are logicals, doubles, integers, characters, and so on. With a value, everything has been evaluated - there is nothing left to define. Here's an example:
 
-if you send filter a value, that works.
+```{r}
+is_droid <- starwars$species == "Droid" & !is.na(starwars$species)
 
-if you send filter an expression, it evaluates the expression first using the data, then using the context.
+is_droid
+```
 
-you can build expressions usig symbols
+You can send these values as an argument to dplyr's `filter()` function:
+
+```{r}
+filter(starwars, is_droid)
+```
+
+As you can see, `filter()` is perfectly happy to take this set of values and return the data frame - but that's not why dplyr functions are so useful. We are accustomed to using dplyr like this:
+
+```{r}
+filter(starwars, species == "Droid")
+```
+
+Here, we used an __expression__, `species == "Droid"`; it is then `filter()`'s job to evaluate expressions into values - then use those values to return the corresponding rows of the data frame.
+
+As we have found out, when dplyr evaluates an expression, its default is to look for variable-names first in the data frame, then in the context from which you called the function. Going forward, we will go through some examples of how you can use tidyeval to build expressions that are evaluated according to _your_ specifications.
+
+You can build expressions using __symbols__; in this case, `species` is a symbol. Let's say you are building a shiny app where you need to call a dplyr function on a data frame that you upload to the app. When you are writing the app, you cannot possibly know the variable names that will be used at runtime. 
+
+It may appear to make it difficult to compose an expression for dplyr to evaluate. We will see how the tidyeval framework lets you build expressions using symbols that you can create at runtime.
+
+### Quosures
+
+If you are already a little familiar with tidyeval, you have heard about __quosures__. These are the central feature of tidyeval. 
+
+However, I'm not going to say too much about quosures just yet. In the Star Wars movies, Yoda was not introduced until the second movie was released, even though he is a pivotal character.
+
+For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. We will look at quosures more explicitly later in this tutorial.
+
+> "Patience, for the Jedi it is time to eat as well." - a certain Jedi Master
+
+## Tidyeval and tidyverse 
+
+One of the mantras of the tidyverse is "data first!" 
+
+This commonly refers to design of tidyverse functions where a data-frame is the first argument; this makes it easy to use the pipe operator. For example, let's find the youngest character(s) from each species.
+
+```{r}
+birth_year <- c(15, 19) # what if filter() did not look at data first?
+
+starwars %>%
+  select(name, species, birth_year) %>%
+  group_by(species) %>%
+  filter(birth_year == min(birth_year, na.rm = TRUE)) 
+```
+
+As you can see, we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the calling context. By following this rule, it becomes easier to work with tidyverse functions because they behave consistently according to a convention.
+
+In the remainder of this tutorial, we are going to use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind going forward, we are restricting ourselves to using these functions when the data-source is a local data frame. I understand that these priciples extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
 
 ## Using functions that use tidyeval
 
 ### "selecty" functions
+
+### "namey" functions
 
 ## Writing functions that use tidyeval
 
@@ -170,23 +235,4 @@ you can build expressions usig symbols
 
 
 
-- Operations on data frames
-
-```{r does-not-work, exercise=TRUE}
-greet <- function(name) {
-  "How do you do, name?"
-}
-
-greet("your name here")
-```
-
-look here
-
-```{r glue2, exercise=TRUE}
-greet <- function(name) {
-  glue::glue("How do you do, {name}?")
-}
-
-greet("your name here")
-```
 
