@@ -152,9 +152,9 @@ name <- "not Hadley"
 
 In the first attempt, we cannot evaluate the name because it is "quoted": the string itself is simply a value. In the second attempt, we build up the string piece-by-piece: `paste0()` evaluates `name` within the larger set of expressions. In the third attempt we use the __glue__ package, which allows us to compose a string by "unquoting": `{name}` is replaced with value of `name`, using the context from which `glue()` is called.
 
-It may be useful to establish some vocabulary terms: values, expressions, and symbols.
+It may be useful to establish some vocabulary terms: symbols, expressions, and quosures.
 
-### Values, expressions, and symbols (oh my!)
+### Symbols, expressions, and quosures (oh my!)
 
 This may be a good time to recall the [famous quote from _Advanced R_](https://adv-r.hadley.nz/functions.html#all-calls):
 
@@ -164,9 +164,7 @@ This may be a good time to recall the [famous quote from _Advanced R_](https://a
 > Everything that happens is a function call."
 > — John Chambers
 
-Here, we will go over three important kinds of objects in the tideval framework.
-
-A __value__ is something that has a defined, well, value. Types of values are logicals, doubles, integers, characters, and so on. With a value, everything has been evaluated - there is nothing left to define. Here's an example:
+The ultimate result of evaluation (tidy or otherwise) is a value. Here, we will go over the objects we use in tidyeval to get to values. Types of values are logicals, doubles, integers, characters, and so on. With a value, everything has been evaluated - there is nothing left to define. Here's an example:
 
 ```{r}
 is_droid <- starwars$species == "Droid" & !is.na(starwars$species)
@@ -186,21 +184,17 @@ As you can see, `filter()` is perfectly happy to take this set of values and ret
 filter(starwars, species == "Droid")
 ```
 
-Here, we used an __expression__, `species == "Droid"`; it is then `filter()`'s job to evaluate expressions into values - then use those values to return the corresponding rows of the data frame.
+Here, we used an __expression__, `species == "Droid"`; it is then `filter()`'s job to evaluate this expression into values - then use those values to return the corresponding rows of the data frame. It may be useful to think of an expression as a set of instructions.
 
 As we have found out, when dplyr evaluates an expression, its default is to look for variable-names first in the data frame, then in the context from which you called the function. Going forward, we will go through some examples of how you can use tidyeval to build expressions that are evaluated according to _your_ specifications.
 
-You can build expressions using __symbols__; in this case, `species` is a symbol. Let's say you are building a shiny app where you need to call a dplyr function on a data frame that you upload to the app. When you are writing the app, you cannot possibly know the variable names that will be used at runtime. 
+You can compose expressions using __symbols__; in this case, `species` is a symbol. Let's say you are building a shiny app where you need to call a dplyr function on a data frame that you upload to the app. When you are writing the app, you cannot possibly know the variable names that will be used at runtime. 
 
-It may appear to make it difficult to compose an expression for dplyr to evaluate. We will see how the tidyeval framework lets you build expressions using symbols that you can create at runtime.
+It may not be evident how to build expression for dplyr to evaluate. We will see how the tidyeval framework lets you build expressions using symbols that you can create at runtime.
 
-### Quosures
+If you are already a little familiar with tidyeval, you have heard about __quosures__. These are the central feature of tidyeval. However, I'm not going to say too much about quosures just yet. In the Star Wars movies, Yoda was not introduced until the second movie was released, even though he is a pivotal character.
 
-If you are already a little familiar with tidyeval, you have heard about __quosures__. These are the central feature of tidyeval. 
-
-However, I'm not going to say too much about quosures just yet. In the Star Wars movies, Yoda was not introduced until the second movie was released, even though he is a pivotal character.
-
-For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. We will look at quosures more explicitly later in this tutorial.
+For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. We will look at quosures more explicitly later in this tutorial.
 
 > "Patience, for the Jedi it is time to eat as well." - a certain Jedi Master
 
@@ -219,17 +213,159 @@ starwars %>%
   filter(birth_year == min(birth_year, na.rm = TRUE)) 
 ```
 
-As you can see, we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the calling context. By following this rule, it becomes easier to work with tidyverse functions because they behave consistently according to a convention.
+As you can see, we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
 
 In the remainder of this tutorial, we are going to use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind going forward, we are restricting ourselves to using these functions when the data-source is a local data frame. I understand that these priciples extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
 
 ## Using functions that use tidyeval
+
+One use for tidyeval is to help you write package functions. Another application is writing __shiny__ apps. 
+
+In a shiny app, let's say you want your user to be able to upload a data-frame, filter on some condition, then make a scatterplot, letting your user specify your axes. Let's also say that you want to use the tidyverse. 
+
+For the filtering step, one challenge may be to compose a filtering condition without knowing what the data-frames's variables are. 
+
+For the visualisation step, __ggplot2__ does not currently use tidyeval; instead you use the `aes_string()` function. But, by becoming familiar with tidyeval now, it will be that much easier to use the tidyeval framework in ggplot2 when it arrives.
+
+Let's pick up the filtering example. As you know, the `dplyr::filter()` function takes a series of expressions that it evaluates to `TRUE` or `FALSE` to determine which rows to return. Let's say that you have a shiny app where you have:
+
+- an input that specifies the variable for the filter - this will be a character string
+- an input that specifies the value - this will be a numeric
+
+For the sake of simplicity, let's say that it is single condition and that we are testing equality. For the sake of even more simplicity, let's start out by specifying we will use the `starwars` data; we will filter on `birth_year`, we will vary only the value. 
+
+```{r}
+value <- 19
+
+filter(starwars, birth_year == value)
+```
+
+So far so good - `filter()` looks for `birth_year` in the data and finds it, then looks for `value` in the data, does not find it, then finds `value` in the context.
+
+You will need to use a little imagination because this is a contrived example. Let's imagine that we don't know that `starwars` does not have a column named `value`. We want to make this evaluation "airtight", we want to make sure that we use `value` from our context.
+
+Let's look back at our string example:
+
+```{r}
+library("glue")
+
+value <- 19
+
+glue("We want rows where the birth_year is {value}.")
+```
+
+Recall that we are composing a string by unquoting: `{name}` is replaced with value of `name`, using the context from which `glue()` is called. 
+
+Instead of composing strings we need to compose expressions, so Tidyeval provides an __unquoting__ function.
+The `UQ()` function acts on expressions in tidyeval like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result.
+
+##### Your turn
+
+Make sure this works:
+
+```{r filter-uq-value, exercise=TRUE}
+value <- 19
+
+filter(starwars, birth_year == UQ(value))
+```
+
+To convince yourself that the code above is resistant to mischeif, change both instances of `value` to `birth_date` and rerun.
+
+There is another thing we can do here, instead of evaluating the filter statement then printing out the data, we can capture the set of instructions, the expression, and print that instead. To do that, we use the `quo()` function.
+
+```{r filter-uq-value-quo, exercise=TRUE}
+value <- 19
+
+quo(
+  filter(starwars, birth_year == UQ(value))
+)
+```
+
+Run this code to see what happens. Switch `value` with `birth_year` again, if you like.
+
+We see again, this word "quosure". Again, let's think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions (`~filter(starwars, birth_year == 19)`), and we are given an indication of the materials (`local`). For now, we can use the `quo()` function to verify that our instructions are what we expect.
+
+-----
+
+Our next step is to specify the dataframe and the column to filter. Recall that symbols can be used to compose expressions. Tidyeval provides a function to convert strings into symbols, `sym()`. 
+
+```{r}
+sym("foo")
+```
+
+We can use the `sym()` function to help build the left-hand-side of our expression.
+
+##### Your turn
+
+This code does not work... yet.
+
+```{r filter-sym, exercise=TRUE}
+df <- starwars
+var_name <- "birth_date"
+value <- 19
+
+quo(
+  filter(starwars, sym(var_name) == UQ(value))
+)
+```
+
+As you can see, this doesn't look right. If only there were a way that we could evaluate `sym(var_name)` and incorporate the result into the expression...
+
+Also notice that we don't have to do anything special with the first argument to `filter()`. We can replace the argument with an equivalent object and get the same result; `filter()` is __referentially transparent__ for this argument.
+
+Finally, if you like, remove the `quo()` to make sure it still returns the data we expect.
+
+-----
+
+##### Your turn
+
+There is one more thing we can do to make things airtight. Consider this bit of mischeif:
+
+```{r filter-mischeif, exercise=TRUE}
+df <- starwars
+var_name <- "parsec"
+# parsec <- 12
+value <- 19
+
+filter(df, UQ(sym(var_name)) == UQ(value))
+```
+
+Run this as is, and we get an error-message that `parsec` is not found. Clearly, it is not a column in the data-frame, and it is not in our context. But what if it were in our context? Uncomment the `parsec <- 12` line and rerun. What happens? Why?
+
+-----
+
+Tidyeval has tool to make sure that we look in _only_ the data for a variable, a pronoun named `.data` to stand in for the data argument. You can use this to compose expressions that throw an error if variables are not found in the data.
+
+Here are some examples:
+
+```{r error=TRUE}
+filter(starwars, .data$birth_year == 19)
+
+filter(mtcars, .data$birth_year == 19)
+
+filter(starwars, .data[["birth_year"]] == 19)
+```
+
+##### Your turn
+
+Modify the left-hand-side of the filtering expression to use the `.data` pronoun with `var_name`. Make sure that we throw an error regardless of the `parsec <- 12` line being uncommented or not.
+
+```{r filter-mischeif-managed, exercise=TRUE}
+df <- starwars
+var_name <- "parsec"
+# parsec <- 12
+value <- 19
+
+filter(df, UQ(sym(var_name)) == UQ(value))
+```
 
 ### "selecty" functions
 
 ### "namey" functions
 
 ## Writing functions that use tidyeval
+
+pronouns 
 
 ## More stuff
 
