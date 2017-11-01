@@ -474,5 +474,9 @@ Experiment with unquoting the string rather than the symbol, try using different
 
 ## More stuff
 
+This would be a good place to make a survey of other tidyeval resources.
+
+Thankfully, Mara Averick has already done this with her [tidyeval resource roundup](https://maraaverick.rbind.io/2017/08/tidyeval-resource-roundup/), so the best thing I can do here is to point you that-a-way.
+
 
 
