@@ -39,6 +39,12 @@ The goal of this tutorial is to make it easier for you to tackle these reference
 
 As you go through this tutorial, please keep in mind that I am an imperfect interpeter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will recitify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)).
 
+Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I have ther greatest respect for the work made by Hadley and Lionel to incorporate quasiquotation theory into tidyeval. It is a mark of that respect and of my lack of familiarity with the theory that I avoid addressing it, and instead enthusiastially refer you to their material.
+
+One more thing (still here?), for the purpose of this tutorial, I have shied away from using the `!!` and `!!!` operators. I have nothing against them; I rather like using them. However, there are a few cases where you can run into trouble, so I decided to leave learning their use as a further exercise to the reader.
+
+One final note - this tutorial is produced using the [__learnr__ package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactve exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
+
 ## What motivates tidyeval?
 
 ### Advantages
@@ -359,16 +365,114 @@ value <- 19
 filter(df, UQ(sym(var_name)) == UQ(value))
 ```
 
+When we use tidyeval with dplyr functions, dplyr evaluates the expressions that you provide. It can be useful to keep in mind what the dplyr function is evaluating *to*. `filter()` evaluates its expressions to logical values - it wants `TRUE` or `FALSE`. Some dplyr functions do things a little differently, let's look at some of those differences.   
+
 ### "selecty" functions
+
+There is a family of functions that use the __tidyselect__ package as their back-end; `dplyr::select()` is the most prominent. Other "selecty" functions include `tidyr::gather()` and `dplyr::pull()`. They all work the same way because they all need to identify a set of columns within an existing data source.
+
+This excellent [tidyr article](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/) dives into the theory and design choices. There are two big points here.
+
+1. Selecty functions evaluate its expressions to integers that indicate column-positions in the data source.
+
+2. It is best-practice to provide expressions that make sense only in the data, not in the surrounding context.
+
+Let's look at some examples of these principles in action. The usual way to call a select function is just to use the bare column-names, which we now know as symbols. 
+
+```{r}
+select(starwars, name, species : starships)
+```
+
+We get an identical result if we specify the column-positions explicitly.
+
+```{r eval=FALSE}
+select(starwars, 1, 10 : 13)
+```
+
+If we want to insist that we look only in the data for the name (not a bad idea), we can use the `.data` pronoun:
+
+```{r eval=FALSE}
+select(starwars, .data$name, .data$species : .data$starships)
+```
+
+Here's where things can get potentially difficult. Let's say that you want to select from a column-position to until the last column. This works:
+
+```{r eval=FALSE}
+select(starwars, .data$name, .data$species : ncol(starwars))
+```
+
+But the expression `ncol(starwars)` refers to the context where `starwars` is found. Our best-practice is to refer only to the data. We now have two references to `starwars` in the function call; we would prefer to have only one.
+
+The __tidyselect__ package gives us a solution, a helper function called `last_col()` (if functions had hex-stickers, I imagine this hex-sticker would feature a pint glass, but I digress).
+
+```{r}
+library("tidyselect")
+select(starwars, .data$name, .data$species : last_col())
+```
+
+##### Your turn
+
+Try out some of the techniques featured above to convince yourself that they work.
+
+```{r selecty, exercise=TRUE}
+library("tidyselect")
+select(starwars, name, species : starships)
+```
+
+Try some crazy ideas and see what works. For your craziest idea that works, explain why it works and why it might not be a good idea to use it in practice.
 
 ### "namey" functions
 
+Some dplyr functions, in addition to evaluating expressions, assign column names. These include `mutate()`, `summarise()`, and `transmute()`.
+
+For an example, let's find the minimum `birth_year` for each species.
+
+```{r}
+starwars %>%
+  group_by(species) %>%
+  summarise(birth_year_min = min(birth_year, na.rm = TRUE)) 
+```
+
+Now I want to parameterise this, in case I want to do the same thing with height. (You are likely suspecting that we should really be making a function to do this - which we will in the next section of this tutorial.) 
+
+Here's one way to do it:
+
+```{r}
+var_to_min <- "birth_year"
+
+var_min <- paste0(var_to_min, "_min")
+
+starwars %>%
+  group_by(species) %>%
+  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) 
+```
+
+The first step here is to create a new variable-name by appending `"_min"` to the variable-name of interest. The second step is to adapt the `summarise()` expression. Note that it has both a left side (new name) and a right side (value). The good news is that we can use our unquoting tools on both sides. However, the `=` operator does not support unquoting on the left-side, so we use the `:=` operator from the __rlang__ package - designed just for this purpose. 
+
+The use of the `:=` operator is the thing that we need to keep in mind when using "namey" functions. 
+
+One other point, because the left-side is going to end up as a name, you can unquote a symbol, `UQ(sym(var_min))`, or a string, `UQ(var_min)`.
+
+##### Your turn
+
+Evaluate this solution for yourself:
+
+```{r namey-summarise, exercise=TRUE}
+var_to_min <- "birth_year"
+
+var_min <- paste0(var_to_min, "_min")
+
+starwars %>%
+  group_by(species) %>%
+  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) 
+```
+
+Experiment with unquoting the string rather than the symbol, try using different variable names, wrap the call in `quo()` to see the instructions. Have fun.
+
 ## Writing functions that use tidyeval
 
-pronouns 
 
 ## More stuff
-
 
 
 
