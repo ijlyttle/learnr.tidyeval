@@ -16,8 +16,7 @@
 #' @export           sym syms
 #' @importFrom rlang expr exprs enexpr
 #' @export           expr exprs enexpr
-#'
-#' @importFrom rlang UQ UQS !! !!!
+#' @importFrom rlang UQ UQS
 #'
 NULL
 
