@@ -3,6 +3,7 @@
 export("%>%")
 export(enexpr)
 export(enquo)
+export(ex_filter_name_value)
 export(expr)
 export(exprs)
 export(number)

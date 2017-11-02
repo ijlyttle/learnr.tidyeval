@@ -3,3 +3,5 @@
 ^README\.Rmd$
 ^README-.*\.png$
 ^docs/.*$
+^inst/tutorials/tidyeval/rsconnect/documents/tidyeval\.Rmd/shinyapps\.io$
+^\.travis\.yml$

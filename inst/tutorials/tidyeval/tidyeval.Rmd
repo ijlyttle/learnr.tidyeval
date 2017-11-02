@@ -471,6 +471,57 @@ Experiment with unquoting the string rather than the symbol, try using different
 
 ## Writing functions that use tidyeval
 
+I imagine that there may have been a few times in the previous section when you thought to yourself, "why don't you write a function?!?" 
+
+Yes - we should be writing functions; tidyeval's superpower is that it allows us to write functions that we can be confident will work _how we intend_, after we release them into the world. For this tutorial, I thought to try to introduce one tidyeval component at a time, so I  saved functions for later. You, dear reader, may judge me on that.
+
+Now that we're here, let's look at writing functions.
+
+Recall our example where we filtered the `starwars` dataset based on a string and a numeric value.
+
+```{r filter-str-function eval=FALSE}
+df <- starwars
+var_name <- "birth_date"
+value <- 19
+
+filter(starwars, UQ(sym(var_name)) == UQ(value))
+```
+
+The rest of these examples are in "interactive" mode so that you can experiment with them. Our first step is to wrap this code in a function.
+
+```{r filter-str-function, exercise=TRUE}
+filter_name_value <- function(.data, var_name, value) {
+  dplyr::filter(.data, UQ(sym(var_name)) == UQ(value))  
+}
+
+filter_name_value(starwars, "birth_year", 19)
+```
+
+
+
+If you are writing a package function, you will also have to import the __rlang__ function you use, like `UQ` and `sym`. As of the writing of this tutorial, the tidyverse folks are working on a new package [__usethis__](https://github.com/r-lib/usethis), that will make it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. The `use_tidyeval()` function is not on CRAN yet (2017-11-01), but imagine it will be there soon.
+
+```{r}
+filter_quo_value <- function(.data, var_quo, value) {
+  filter(.data, UQ(var_quo) == UQ(value))  
+}
+
+filter_quo_value(starwars, quo(birth_year), 19)
+```
+
+```{r}
+filter_sym_value <- function(.data, sym, value) {
+  
+  sym <- enquo(sym)
+  
+  filter(.data, UQ(sym) == UQ(value))  
+}
+
+filter_sym_value(starwars, birth_year, 19)
+
+filter_sym_value(mtcars, cyl, 6)
+```
+
 
 ## More stuff
 

@@ -14,6 +14,7 @@ LazyData: true
 URL: https://github.com/ijlyttle/learnr.tidyeval
 BugReports: https://github.com/ijlyttle/learnr.tidyeval/issues
 RoxygenNote: 6.0.1
-Imports: 
+Imports:
     rlang (>= 0.1.2),
-    magrittr
+    magrittr,
+    dplyr
