@@ -39,13 +39,13 @@ I am particularly impressed with the "Erratum" article, as it explains very well
 
 The goal of this tutorial is to make it easier for you to tackle these references.
 
-As you go through this tutorial, please keep in mind that I am an imperfect interpeter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will recitify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)). 
+As you go through this tutorial, please keep in mind that I am an imperfect interpreter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will rectify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)). 
 
-Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I have ther greatest respect for the work made by Hadley and Lionel to incorporate quasiquotation theory into tidyeval. It is a mark of that respect and of my lack of familiarity with the theory that I avoid addressing it, and instead enthusiastially refer you to their material.
+Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I have the greatest respect for the work made by Hadley and Lionel to incorporate quasiquotation theory into tidyeval. It is a mark of that respect and of my lack of familiarity with the theory that I avoid addressing it, and instead enthusiastically refer you to their material.
 
 One more thing (still here?), for the purpose of this tutorial, I have shied away from using the `!!` and `!!!` operators. I have nothing against them; I rather like using them. However, there are a few cases where you can run into trouble, so I decided to leave learning their use as a further exercise to the reader.
 
-One final note - this tutorial is produced using the [__learnr__ package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactve exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
+One final note - this tutorial is produced using the [__learnr__ package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactive exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
 
 ## What motivates tidyeval?
 
@@ -99,6 +99,8 @@ filter(starwars, species == "Droid")
 
 As you see, neither of these substitutions works how we expect - so it is not obvious how to call dplyr functions without hard-coding everything.
 
+-------
+
 #### Ambiguity
 
 As well, dplyr evaluates expressions ambiguously. As we will see, the code `filter(df, x == y)` can be interpreted differently depending on the data and the context:
@@ -110,7 +112,7 @@ df[x == df$y, ]
 df[x == y, ]
 ```
 
-If the "wrong" thing happens when you are working interactively, you can see that there is a problem and correct it. If the "wrong" thing happens when you are calling a function (from a function, from a packge, ...), it can be nearly impossible to figure out what went wrong, let alone fix it.
+If the "wrong" thing happens when you are working interactively, you can see that there is a problem and correct it. If the "wrong" thing happens when you are calling a function (from a function, from a package, ...), it can be nearly impossible to figure out what went wrong, let alone fix it.
 
 ##### Your turn
 
@@ -119,9 +121,9 @@ Let's say we want to look at the Star Wars characters, comparing eye-color and h
 In the code-block below:
 
 1. Run the code as-is.
-1. Uncomment the `eye_color == "black"` line, rerun.
-1. Uncomment the `my_color == "black"` line, change the filter expression to `hair_color == my_color`, rerun.
-1. Fiddle around with other varaibles and filter expressions.
+1. Uncomment the `eye_color <- "black"` line, rerun.
+1. Uncomment the `my_color <- "black"` line, change the filter expression to `hair_color == my_color`, rerun.
+1. Fiddle around with other variables and filter expressions.
 
 What can you tell about the rules that `dplyr::filter()` uses to evaluate an expression?
 
@@ -130,6 +132,8 @@ What can you tell about the rules that `dplyr::filter()` uses to evaluate an exp
 # my_color <- "black"   
 filter(starwars, hair_color == eye_color)
 ```
+
+------
 
 ### Summary
 
@@ -143,7 +147,7 @@ We can demonstrate tidyeval's central idea using strings. Let's say that we want
 
 ##### Your turn
 
-In the excercise below, you will see that our first attempt is clearly doomed. Comment and un-comment the following lines to see some approaches we can use to compose the string that we expect. Maybe try some compoistions of your own...
+In the exercise below, you will see that our first attempt is clearly doomed. Comment and un-comment the following lines to see some approaches we can use to compose the string that we expect. Maybe try some compositions of your own...
 
 In your own words, why does the first attempt fail, while the other two succeed?
 
@@ -157,6 +161,8 @@ name <- "not Hadley"
 # library("glue")
 # glue("How do you do, {name}?")
 ```
+
+-----
 
 In the first attempt, we cannot evaluate the name because it is "quoted": the string itself is simply a value. In the second attempt, we build up the string piece-by-piece: `paste0()` evaluates `name` within the larger set of expressions. In the third attempt we use the __glue__ package, which allows us to compose a string by "unquoting": `{name}` is replaced with value of `name`, using the context from which `glue()` is called.
 
@@ -172,7 +178,7 @@ This may be a good time to recall the [famous quote from _Advanced R_](https://a
 > Everything that happens is a function call."
 > — John Chambers
 
-The ultimate result of evaluation (tidy or otherwise) is a value. Here, we will go over the objects we use in tidyeval to get to values. Types of values are logicals, doubles, integers, characters, and so on. With a value, everything has been evaluated - there is nothing left to define. Here's an example:
+The ultimate result of evaluation (tidy or otherwise) is a value. Here, we will go over the types of objects used in tidyeval to get to values. Types of values are logicals, doubles, integers, characters, and so on. With a value, everything has been evaluated - there is nothing left to define. Here's an example:
 
 ```{r}
 is_droid <- starwars$species == "Droid" & !is.na(starwars$species)
@@ -210,7 +216,7 @@ For now, it may be useful to think about a quosure as an expression that carries
 
 One of the mantras of the tidyverse is "data first!" 
 
-This commonly refers to design of tidyverse functions where a data-frame is the first argument; this makes it easy to use the pipe operator. For example, let's find the youngest character(s) from each species.
+Tidyverse functions are designed so that a data-frame is the first argument wherever feasible; this makes it easy to use the pipe operator. For example, let's find the youngest character(s) from each species.
 
 ```{r}
 birth_year <- c(15, 19) # what if filter() did not look at data first?
@@ -223,7 +229,7 @@ starwars %>%
 
 As you can see, we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
 
-In the remainder of this tutorial, we are going to use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind going forward, we are restricting ourselves to using these functions when the data-source is a local data frame. I understand that these priciples extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
+In the remainder of this tutorial, we are going to use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind going forward, we are restricting ourselves to using these functions with data-sources that are local data-frames. I understand that these principles extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
 
 ## Using functions that use tidyeval
 
@@ -231,7 +237,7 @@ One use for tidyeval is to help you write package functions. Another application
 
 In a shiny app, let's say you want your user to be able to upload a data-frame, filter on some condition, then make a scatterplot, letting your user specify your axes. Let's also say that you want to use the tidyverse. 
 
-For the filtering step, one challenge may be to compose a filtering condition without knowing what the data-frames's variables are. 
+For the filtering step, one challenge may be to compose a filtering condition without knowing what the data-frame's variables are. 
 
 For the visualisation step, __ggplot2__ does not currently use tidyeval; instead you use the `aes_string()` function. But, by becoming familiar with tidyeval now, it will be that much easier to use the tidyeval framework in ggplot2 when it arrives.
 
@@ -240,7 +246,7 @@ Let's pick up the filtering example. As you know, the `dplyr::filter()` function
 - an input that specifies the variable for the filter - this will be a character string
 - an input that specifies the value - this will be a numeric
 
-For the sake of simplicity, let's say that it is single condition and that we are testing equality. For the sake of even more simplicity, let's start out by specifying we will use the `starwars` data; we will filter on `birth_year`, we will vary only the value. 
+For the sake of simplicity, let's say that we will consider only a single filtering-condition, and that the condition will test equality. For the sake of even more simplicity, let's start out by specifying we will use the `starwars` data; we will filter on `birth_year`, we will vary only the value. 
 
 ```{r}
 value <- 19
@@ -265,7 +271,7 @@ glue("We want rows where the birth_year is {value}.")
 Recall that we are composing a string by unquoting: `{name}` is replaced with value of `name`, using the context from which `glue()` is called. 
 
 Instead of composing strings we need to compose expressions, so Tidyeval provides an __unquoting__ function.
-The `UQ()` function acts on expressions in tidyeval like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result.
+The `UQ()` function acts on expressions in tidyeval like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result into the expression.
 
 ##### Your turn
 
@@ -277,7 +283,7 @@ value <- 19
 filter(starwars, birth_year == UQ(value))
 ```
 
-To convince yourself that the code above is resistant to mischeif, change both instances of `value` to `birth_date` and rerun.
+To convince yourself that the code above is resistant to mischief, change both instances of `value` to `birth_date` and rerun.
 
 There is another thing we can do here, instead of evaluating the filter statement then printing out the data, we can capture the set of instructions, the expression, and print that instead. To do that, we use the `quo()` function.
 
@@ -295,7 +301,7 @@ We see again, this word "quosure". Again, let's think about a quosure as an expr
 
 -----
 
-Our next step is to specify the dataframe and the column to filter. Recall that symbols can be used to compose expressions. Tidyeval provides a function to convert strings into symbols, `sym()`. 
+Our next step is to specify the data frame and the column to filter. Recall that symbols can be used to compose expressions. Tidyeval provides a function to convert strings into symbols, `sym()`. 
 
 ```{r}
 sym("foo")
@@ -313,7 +319,7 @@ var_name <- "birth_date"
 value <- 19
 
 quo(
-  filter(starwars, sym(var_name) == UQ(value))
+  filter(df, sym(var_name) == UQ(value))
 )
 ```
 
@@ -327,7 +333,7 @@ Finally, if you like, remove the `quo()` to make sure it still returns the data 
 
 ##### Your turn
 
-There is one more thing we can do to make things airtight. Consider this bit of mischeif:
+There is one more thing we can do to make things airtight. Consider this bit of mischief:
 
 ```{r filter-mischeif, exercise=TRUE}
 df <- starwars
@@ -503,7 +509,7 @@ Try using this function to filter other data frames, for example, `filter_name_v
 
 ### Package considerations
 
-As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used low level functions, like `UQ()` and `sym()`, from __rlang__, we import these into the package itself. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
+As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `UQ()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
 
 As of the writing of this tutorial, the tidyverse folks are working on a new package [__usethis__](https://github.com/r-lib/usethis), that will make it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. The `use_tidyeval()` function, used to generate `utils-tidy-eval.R`, is not on CRAN yet (2017-11-01), but I imagine it will be there soon.
 
@@ -521,7 +527,7 @@ UQ(var_quo) == UQ(value)
 
 On the right-hand side, inside the `UQ()`, we want something that evaluates to a value. On the left-hand side, inside the `UQ()`, we want something that evaluates to an expression (a set of instructions). 
 
-We have a tool for encapsulating an expression: `quo()`, which builds a quosure. In this case, we are not using (as far as I know) the context (set of materials) part of the quosure, only the expression. 
+We have a tool for encapsulating an expression: `quo()`, which builds a quosure. In this case, we are not using  the context (set of materials) part of the quosure, only the expression. 
 
 To use our function, we wrap the bare name of our column in `quo()`, in this example: `quo(birth_year)`.
 
