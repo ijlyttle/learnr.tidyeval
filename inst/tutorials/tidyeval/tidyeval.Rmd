@@ -18,6 +18,8 @@ options(width = 100)
 knitr::opts_chunk$set(comment = "#>")
 ```
 
+(Note: I think this tutorial is almost ready. I have run out of gas on a few sections and I way want to add a little more supporting material. Otherwise, ready to start showing this around.)
+
 ## Introduction
 
 Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I _thought_ I understood it, I _seemed_ to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here's a receipt:
@@ -37,7 +39,7 @@ I am particularly impressed with the "Erratum" article, as it explains very well
 
 The goal of this tutorial is to make it easier for you to tackle these references.
 
-As you go through this tutorial, please keep in mind that I am an imperfect interpeter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will recitify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)).
+As you go through this tutorial, please keep in mind that I am an imperfect interpeter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will recitify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)). 
 
 Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I have ther greatest respect for the work made by Hadley and Lionel to incorporate quasiquotation theory into tidyeval. It is a mark of that respect and of my lack of familiarity with the theory that I avoid addressing it, and instead enthusiastially refer you to their material.
 
@@ -479,7 +481,7 @@ Now that we're here, let's look at writing functions.
 
 Recall our example where we filtered the `starwars` dataset based on a string and a numeric value.
 
-```{r filter-str-function eval=FALSE}
+```{r filter-str-ex, eval=FALSE}
 df <- starwars
 var_name <- "birth_date"
 value <- 19
@@ -497,37 +499,124 @@ filter_name_value <- function(.data, var_name, value) {
 filter_name_value(starwars, "birth_year", 19)
 ```
 
+Try using this function to filter other data frames, for example, `filter_name_value(mtcars, "cyl", 6)`.
 
+### Package considerations
 
-If you are writing a package function, you will also have to import the __rlang__ function you use, like `UQ` and `sym`. As of the writing of this tutorial, the tidyverse folks are working on a new package [__usethis__](https://github.com/r-lib/usethis), that will make it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. The `use_tidyeval()` function is not on CRAN yet (2017-11-01), but imagine it will be there soon.
+As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used low level functions, like `UQ()` and `sym()`, from __rlang__, we import these into the package itself. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
 
-```{r}
+As of the writing of this tutorial, the tidyverse folks are working on a new package [__usethis__](https://github.com/r-lib/usethis), that will make it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. The `use_tidyeval()` function, used to generate `utils-tidy-eval.R`, is not on CRAN yet (2017-11-01), but I imagine it will be there soon.
+
+To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](). Try it out, i.e. `ex_filter_name_value(mtcars, "cyl", 6)`.
+
+### Quosures
+
+We have written a function that seems to work for a variety of cases, let's work to make this code look-and-feel a little more like "dplyr". We would like to use a bare symbol, rather than a string.
+
+Consider the function `filter_quo_value()` in the exercise below. The operative expression is
+
+```r
+UQ(var_quo) == UQ(value)
+```
+
+On the right-hand side, inside the `UQ()`, we want something that evaluates to a value. On the left-hand side, inside the `UQ()`, we want something that evaluates to an expression (a set of instructions). 
+
+We have a tool for encapsulating an expression: `quo()`, which builds a quosure. In this case, we are not using (as far as I know) the context (set of materials) part of the quosure, only the expression. 
+
+To use our function, we wrap the bare name of our column in `quo()`, in this example: `quo(birth_year)`.
+
+Like the example above, experiment with this function.
+
+```{r filter-quo-function, exercise=TRUE}
 filter_quo_value <- function(.data, var_quo, value) {
-  filter(.data, UQ(var_quo) == UQ(value))  
+  dplyr::filter(.data, UQ(var_quo) == UQ(value))  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)
 ```
 
-```{r}
+We are closer, but we still have this `quo()` hanging around; it's not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us. This is the job of the `enquo()` function.
+
+We use `enquo()` in our function to capture the argument as a quosure. Try it out:
+
+```{r filter-sym-value, exercise=TRUE}
 filter_sym_value <- function(.data, sym, value) {
   
   sym <- enquo(sym)
   
-  filter(.data, UQ(sym) == UQ(value))  
+  dplyr::filter(.data, UQ(sym) == UQ(value)) 
 }
 
 filter_sym_value(starwars, birth_year, 19)
-
-filter_sym_value(mtcars, cyl, 6)
 ```
 
+Bonus task: amend the exercise above to make a call to `filter_sym_value()` using a string, `"birth_year"`. Do not change the function, change the call. Look earlier in this tutorial for a hint.
+
+### Renaming variables
+
+Recall this exercise:
+
+```{r eval=FALSE}
+var_to_min <- "birth_year"
+
+var_min <- paste0(var_to_min, "_min")
+
+starwars %>%
+  group_by(species) %>%
+  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) 
+```
+
+Let's rewrite this as a function where we want to specify the variable that we minimise and the variable that use for grouping.
+
+Talk about `quo_name()`, remind about `:=`.
+
+```{r renaming-variables, exercise=TRUE}
+summarise_min <- function(.data, var_min, var_group) {
+  
+  var_group <- enquo(var_group)
+  var_min <- enquo(var_min)
+  
+  name_var_min <- rlang::quo_name(var_min)
+  name_var_new <- paste0(name_var_min, "_min")
+  
+  .data %>%
+    dplyr::group_by(UQ(var_group)) %>%
+    dplyr::summarise(UQ(name_var_new) := min(UQ(var_min), na.rm = TRUE))
+}
+
+summarise_min(starwars, birth_year, species)
+```
+
+### Multiple variables
+
+Let's say we want to specify more than one grouping variable. Talk about using `quos()` to capture the `...` into a list of quosures. Talk about using `UQS()` to unquote a list of quosures.
+
+```{r multiple-variables, exercise=TRUE}
+summarise_more_min <- function(.data, var_min, ...) {
+  
+  var_group <- quos(...)
+  var_min <- enquo(var_min)
+  
+  name_var_min <- rlang::quo_name(var_min)
+  name_var_new <- paste0(name_var_min, "_min")
+  
+  .data %>%
+    dplyr::group_by(UQS(var_group)) %>%
+    dplyr::summarise(UQ(name_var_new) := min(UQ(var_min), na.rm = TRUE))
+}
+
+summarise_more_min(starwars, birth_year, species, hair_color)
+```
 
 ## More stuff
 
-This would be a good place to make a survey of other tidyeval resources.
+Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through the three main references by the tidyeval architects, you can use these to deepen your knowledge ,and introduce yourself to the supporting theory:
 
-Thankfully, Mara Averick has already done this with her [tidyeval resource roundup](https://maraaverick.rbind.io/2017/08/tidyeval-resource-roundup/), so the best thing I can do here is to point you that-a-way.
+- [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
+- [Tidy evaluation](http://rlang.tidyverse.org/articles/tidy-evaluation.html)
+- [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
+
+There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval. Mara Averick has the canonical [tidyeval resource roundup](https://maraaverick.rbind.io/2017/08/tidyeval-resource-roundup/), so the best thing I can do here is to point you that-a-way.
 
 
 
