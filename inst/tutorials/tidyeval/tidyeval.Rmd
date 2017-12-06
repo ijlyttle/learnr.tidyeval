@@ -18,9 +18,10 @@ options(width = 100)
 knitr::opts_chunk$set(comment = "#>")
 ```
 
-(Note: I think this tutorial is almost ready. I have run out of gas on a few sections and I way want to add a little more supporting material. Otherwise, ready to start showing this around.)
 
 ## Introduction
+
+(Note: I think this tutorial is almost ready. I have run out of gas on a few sections and I way want to add a little more supporting material. Otherwise, ready to start showing this around.)
 
 Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I _thought_ I understood it, I _seemed_ to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here's a receipt:
 
