@@ -47,11 +47,6 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 
 <div id="section-introduction" class="section level2">
 <h2>Introduction</h2>
-<div class="figure">
-<img src="images/rstudio.png" alt="rstudio.png" />
-<p class="caption">rstudio.png</p>
-</div>
-<p>(Note: I think this tutorial is almost ready. I have run out of gas on a few sections and I way want to add a little more supporting material. Otherwise, ready to start showing this around.)</p>
 <p>Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I <em>thought</em> I understood it, I <em>seemed</em> to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here’s a receipt:</p>
 <blockquote class="twitter-tweet" data-lang="en">
 <p lang="en" dir="ltr">
@@ -66,12 +61,12 @@ Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%
 <li><a href="http://dplyr.tidyverse.org/articles/programming.html">Programming with dplyr</a></li>
 <li><a href="http://rlang.tidyverse.org/articles/tidy-evaluation.html">Tidy evaluation</a></li>
 <li><a href="https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/">Erratum tidyr 0.7.0</a></li>
+<li><a href="https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/">Tidy evaluation in ggplot2</a></li>
 </ul>
 <p>I am particularly impressed with the “Erratum” article, as it explains very well the factors that went into a design choice, as well as the factors that went into the decision to modify that choice.</p>
 <p>The goal of this tutorial is to make it easier for you to tackle these references.</p>
 <p>As you go through this tutorial, please keep in mind that I am an imperfect interpreter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will rectify as they become apparent (<a href="https://github.com/ijlyttle/learnr.tidyeval/issues">issue page</a>).</p>
-<p>Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I have the greatest respect for the work made by Hadley and Lionel to incorporate quasiquotation theory into tidyeval. It is a mark of that respect and of my lack of familiarity with the theory that I avoid addressing it, and instead enthusiastically refer you to their material.</p>
-<p>One more thing (still here?), for the purpose of this tutorial, I have shied away from using the <code>!!</code> and <code>!!!</code> operators. I have nothing against them; I rather like using them. However, there are a few cases where you can run into trouble, so I decided to leave learning their use as a further exercise to the reader.</p>
+<p>Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I think that understanding the theory can be helpful (I hope to do so someday), but I don’t think it is a pre-requisite for using the tools.</p>
 <p>One final note - this tutorial is produced using the <a href="https://rstudio.github.io/learnr/"><strong>learnr</strong> package</a>, which lets you produce a document that includes interactive exercises, and can be published to RStudio’s <a href="http://www.shinyapps.io/">shinyapps service</a>.</p>
 </div>
 <div id="section-what-motivates-tidyeval" class="section level2">
@@ -81,31 +76,33 @@ Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%
 <p>You are probably used to <strong>dplyr</strong> code that looks like this:</p>
 <pre class="r"><code>filter(starwars, species == &quot;Droid&quot;)</code></pre>
 <pre><code>#&gt; # A tibble: 5 x 13
-#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
-#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
-#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
-#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
-#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
-#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name  height  mass hair_color skin_color  eye_color birth_year gender
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 C-3PO    167   75. &lt;NA&gt;       gold        yellow          112. &lt;NA&gt;  
+#&gt; 2 R2-D2     96   32. &lt;NA&gt;       white, blue red              33. &lt;NA&gt;  
+#&gt; 3 R5-D4     97   32. &lt;NA&gt;       white, red  red              NA  &lt;NA&gt;  
+#&gt; 4 IG-88    200  140. none       metal       red              15. none  
+#&gt; 5 BB8       NA   NA  none       none        black            NA  none  
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <p>This does the same thing as base R code:</p>
 <pre class="r"><code>starwars[starwars$species == &quot;Droid&quot; &amp;  !is.na(starwars$species), ]</code></pre>
 <pre><code>#&gt; # A tibble: 5 x 13
-#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
-#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
-#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
-#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
-#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
-#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name  height  mass hair_color skin_color  eye_color birth_year gender
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 C-3PO    167   75. &lt;NA&gt;       gold        yellow          112. &lt;NA&gt;  
+#&gt; 2 R2-D2     96   32. &lt;NA&gt;       white, blue red              33. &lt;NA&gt;  
+#&gt; 3 R5-D4     97   32. &lt;NA&gt;       white, red  red              NA  &lt;NA&gt;  
+#&gt; 4 IG-88    200  140. none       metal       red              15. none  
+#&gt; 5 BB8       NA   NA  none       none        black            NA  none  
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <p>The dplyr code is more concise - you don’t have to repeat the name of the data frame, or specify that you don’t want <code>NA</code> values.</p>
 <p>As well, you may have used dplyr to access databases. If the <code>starwars</code> tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression <code>species == &quot;Droid&quot;</code> into SQL to obtain the same result. Tidyeval is the framework that dplyr uses to adapt the expression to the situation, so that “it just works”.</p>
 </div>
 <div id="section-things-to-keep-in-mind" class="section level3">
 <h3>Things to keep in mind</h3>
-<p>However, as <a href="https://youtu.be/qL1fBDQXSy8?t=1m40s">Jar Jar discovered</a>, there is no such thing as a free lunch. There are a couple things to be mindful of.</p>
+<p>As <a href="https://youtu.be/qL1fBDQXSy8?t=1m40s">Jar Jar discovered</a>, there is no such thing as a free lunch. There are a couple things to be mindful of.</p>
 <div id="section-referential-transparency" class="section level4">
 <h4>Referential transparency</h4>
 <p>Most arguments to dplyr functions are not <a href="https://en.wikipedia.org/wiki/Referential_transparency"><strong>referentially transparent</strong></a>. You can’t replace an argument with a seemingly-equivalent argument that you have defined elsewhere.</p>
@@ -114,14 +111,15 @@ Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%
 <p>Let’s look again at our earlier example:</p>
 <pre class="r"><code>filter(starwars, species == &quot;Droid&quot;)</code></pre>
 <pre><code>#&gt; # A tibble: 5 x 13
-#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
-#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
-#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
-#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
-#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
-#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name  height  mass hair_color skin_color  eye_color birth_year gender
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 C-3PO    167   75. &lt;NA&gt;       gold        yellow          112. &lt;NA&gt;  
+#&gt; 2 R2-D2     96   32. &lt;NA&gt;       white, blue red              33. &lt;NA&gt;  
+#&gt; 3 R5-D4     97   32. &lt;NA&gt;       white, red  red              NA  &lt;NA&gt;  
+#&gt; 4 IG-88    200  140. none       metal       red              15. none  
+#&gt; 5 BB8       NA   NA  none       none        black            NA  none  
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <p>Try the following substitutions and see what happens:</p>
 <pre class="r"><code>my_var &lt;- species
 filter(starwars, my_var == &quot;Droid&quot;)
@@ -204,40 +202,43 @@ filter(starwars, hair_color == eye_color)</code></pre>
 <pre class="r"><code>is_droid &lt;- starwars$species == &quot;Droid&quot; &amp; !is.na(starwars$species)
 
 is_droid</code></pre>
-<pre><code>#&gt;  [1] FALSE  TRUE  TRUE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
-#&gt; [17] FALSE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
-#&gt; [33] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
-#&gt; [49] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
-#&gt; [65] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
-#&gt; [81] FALSE FALSE FALSE FALSE  TRUE FALSE FALSE</code></pre>
+<pre><code>#&gt;  [1] FALSE  TRUE  TRUE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE FALSE FALSE
+#&gt; [13] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE
+#&gt; [25] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+#&gt; [37] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+#&gt; [49] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+#&gt; [61] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+#&gt; [73] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+#&gt; [85]  TRUE FALSE FALSE</code></pre>
 <p>You can send these values as an argument to dplyr’s <code>filter()</code> function:</p>
 <pre class="r"><code>filter(starwars, is_droid)</code></pre>
 <pre><code>#&gt; # A tibble: 5 x 13
-#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
-#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
-#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
-#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
-#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
-#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name  height  mass hair_color skin_color  eye_color birth_year gender
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 C-3PO    167   75. &lt;NA&gt;       gold        yellow          112. &lt;NA&gt;  
+#&gt; 2 R2-D2     96   32. &lt;NA&gt;       white, blue red              33. &lt;NA&gt;  
+#&gt; 3 R5-D4     97   32. &lt;NA&gt;       white, red  red              NA  &lt;NA&gt;  
+#&gt; 4 IG-88    200  140. none       metal       red              15. none  
+#&gt; 5 BB8       NA   NA  none       none        black            NA  none  
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <p>As you can see, <code>filter()</code> is perfectly happy to take this set of values and return the data frame - but that’s not why dplyr functions are so useful. We are accustomed to using dplyr like this:</p>
 <pre class="r"><code>filter(starwars, species == &quot;Droid&quot;)</code></pre>
 <pre><code>#&gt; # A tibble: 5 x 13
-#&gt;    name height  mass hair_color  skin_color eye_color birth_year gender homeworld species     films
-#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;
-#&gt; 1 C-3PO    167    75       &lt;NA&gt;        gold    yellow        112   &lt;NA&gt;  Tatooine   Droid &lt;chr [6]&gt;
-#&gt; 2 R2-D2     96    32       &lt;NA&gt; white, blue       red         33   &lt;NA&gt;     Naboo   Droid &lt;chr [7]&gt;
-#&gt; 3 R5-D4     97    32       &lt;NA&gt;  white, red       red         NA   &lt;NA&gt;  Tatooine   Droid &lt;chr [1]&gt;
-#&gt; 4 IG-88    200   140       none       metal       red         15   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; 5   BB8     NA    NA       none        none     black         NA   none      &lt;NA&gt;   Droid &lt;chr [1]&gt;
-#&gt; # ... with 2 more variables: vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name  height  mass hair_color skin_color  eye_color birth_year gender
+#&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 C-3PO    167   75. &lt;NA&gt;       gold        yellow          112. &lt;NA&gt;  
+#&gt; 2 R2-D2     96   32. &lt;NA&gt;       white, blue red              33. &lt;NA&gt;  
+#&gt; 3 R5-D4     97   32. &lt;NA&gt;       white, red  red              NA  &lt;NA&gt;  
+#&gt; 4 IG-88    200  140. none       metal       red              15. none  
+#&gt; 5 BB8       NA   NA  none       none        black            NA  none  
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <p>Here, we used an <strong>expression</strong>, <code>species == &quot;Droid&quot;</code>; it is then <code>filter()</code>’s job to evaluate this expression into values - then use those values to return the corresponding rows of the data frame. It may be useful to think of an expression as a set of instructions.</p>
 <p>As we have found out, when dplyr evaluates an expression, its default is to look for variable-names first in the data frame, then in the context from which you called the function. Going forward, we will go through some examples of how you can use tidyeval to build expressions that are evaluated according to <em>your</em> specifications.</p>
 <p>You can compose expressions using <strong>symbols</strong>; in this case, <code>species</code> is a symbol. Let’s say you are building a shiny app where you need to call a dplyr function on a data frame that you upload to the app. When you are writing the app, you cannot possibly know the variable names that will be used at runtime.</p>
 <p>It may not be evident how to build expression for dplyr to evaluate. We will see how the tidyeval framework lets you build expressions using symbols that you can create at runtime.</p>
-<p>If you are already a little familiar with tidyeval, you have heard about <strong>quosures</strong>. These are the central feature of tidyeval. However, I’m not going to say too much about quosures just yet. In the Star Wars movies, Yoda was not introduced until the second movie was released, even though he is a pivotal character.</p>
-<p>For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. We will look at quosures more explicitly later in this tutorial.</p>
+<p>If you are already a little familiar with tidyeval, you have heard about <strong>quosures</strong>. These are the central feature of tidyeval. For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. We will look at quosures more explicitly later in this tutorial.</p>
 <blockquote>
 <p>“Patience, for the Jedi it is time to eat as well.” - a certain Jedi Master</p>
 </blockquote>
@@ -255,25 +256,25 @@ starwars %&gt;%
   filter(birth_year == min(birth_year, na.rm = TRUE)) </code></pre>
 <pre><code>#&gt; # A tibble: 17 x 3
 #&gt; # Groups:   species [16]
-#&gt;                     name        species birth_year
-#&gt;                    &lt;chr&gt;          &lt;chr&gt;      &lt;dbl&gt;
-#&gt;  1        Luke Skywalker          Human         19
-#&gt;  2           Leia Organa          Human         19
-#&gt;  3             Chewbacca        Wookiee        200
-#&gt;  4                Greedo         Rodian         44
-#&gt;  5 Jabba Desilijic Tiure           Hutt        600
-#&gt;  6                  Yoda Yoda&#39;s species        896
-#&gt;  7                 IG-88          Droid         15
-#&gt;  8                 Bossk     Trandoshan         53
-#&gt;  9                Ackbar   Mon Calamari         41
-#&gt; 10 Wicket Systri Warrick           Ewok          8
-#&gt; 11         Jar Jar Binks         Gungan         52
-#&gt; 12         Quarsh Panaka           &lt;NA&gt;         62
-#&gt; 13            Darth Maul         Zabrak         54
-#&gt; 14           Ayla Secura        Twi&#39;lek         48
-#&gt; 15          Ki-Adi-Mundi         Cerean         92
-#&gt; 16              Plo Koon        Kel Dor         22
-#&gt; 17         Barriss Offee       Mirialan         40</code></pre>
+#&gt;    name                  species        birth_year
+#&gt;    &lt;chr&gt;                 &lt;chr&gt;               &lt;dbl&gt;
+#&gt;  1 Luke Skywalker        Human                 19.
+#&gt;  2 Leia Organa           Human                 19.
+#&gt;  3 Chewbacca             Wookiee              200.
+#&gt;  4 Greedo                Rodian                44.
+#&gt;  5 Jabba Desilijic Tiure Hutt                 600.
+#&gt;  6 Yoda                  Yoda&#39;s species       896.
+#&gt;  7 IG-88                 Droid                 15.
+#&gt;  8 Bossk                 Trandoshan            53.
+#&gt;  9 Ackbar                Mon Calamari          41.
+#&gt; 10 Wicket Systri Warrick Ewok                   8.
+#&gt; 11 Jar Jar Binks         Gungan                52.
+#&gt; 12 Quarsh Panaka         &lt;NA&gt;                  62.
+#&gt; 13 Darth Maul            Zabrak                54.
+#&gt; 14 Ayla Secura           Twi&#39;lek               48.
+#&gt; 15 Ki-Adi-Mundi          Cerean                92.
+#&gt; 16 Plo Koon              Kel Dor               22.
+#&gt; 17 Barriss Offee         Mirialan              40.</code></pre>
 <p>As you can see, we can interpret “data first!” another way: when a tidyverse function evaluates an expression, it looks in the <em>data first</em>, then the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.</p>
 <p>In the remainder of this tutorial, we are going to use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind going forward, we are restricting ourselves to using these functions with data-sources that are local data-frames. I understand that these principles extend to using other data sources such as remote databases, but I am not your best guide to these other situations.</p>
 </div>
@@ -293,11 +294,12 @@ starwars %&gt;%
 
 filter(starwars, birth_year == value)</code></pre>
 <pre><code>#&gt; # A tibble: 2 x 13
-#&gt;             name height  mass hair_color skin_color eye_color birth_year gender homeworld species
-#&gt;            &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;
-#&gt; 1 Luke Skywalker    172    77      blond       fair      blue         19   male  Tatooine   Human
-#&gt; 2    Leia Organa    150    49      brown      light     brown         19 female  Alderaan   Human
-#&gt; # ... with 3 more variables: films &lt;list&gt;, vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name           height  mass hair_color skin_color eye_color birth_year gender
+#&gt;   &lt;chr&gt;           &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 Luke Skywalker    172   77. blond      fair       blue             19. male  
+#&gt; 2 Leia Organa       150   49. brown      light      brown            19. female
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <p>So far so good - <code>filter()</code> looks for <code>birth_year</code> in the data and finds it, then looks for <code>value</code> in the data, does not find it, then finds <code>value</code> in the context.</p>
 <p>You will need to use a little imagination because this is a contrived example. Let’s imagine that we don’t know that <code>starwars</code> does not have a column named <code>value</code>. We want to make this evaluation “airtight”, we want to make sure that we use <code>value</code> from our context.</p>
 <p>Let’s look back at our string example:</p>
@@ -308,28 +310,28 @@ value &lt;- 19
 glue(&quot;We want rows where the birth_year is {value}.&quot;)</code></pre>
 <pre><code>#&gt; We want rows where the birth_year is 19.</code></pre>
 <p>Recall that we are composing a string by unquoting: <code>{name}</code> is replaced with value of <code>name</code>, using the context from which <code>glue()</code> is called.</p>
-<p>Instead of composing strings we need to compose expressions, so Tidyeval provides an <strong>unquoting</strong> function. The <code>UQ()</code> function acts on expressions in tidyeval like the <code>{}</code> acts on strings in <code>glue()</code>: it evaluates its contents and incorporates the result into the expression.</p>
+<p>Instead of composing strings we need to compose expressions, so Tidyeval provides an <strong>unquoting</strong> function. The <code>!!</code> operator acts on expressions in tidyeval like the <code>{}</code> acts on strings in <code>glue()</code>: it evaluates its contents and incorporates the result into the expression.</p>
 <div id="section-your-turn-3" class="section level5">
 <h5>Your turn</h5>
 <p>Make sure this works:</p>
 <div class="tutorial-exercise" data-label="filter-uq-value" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>value &lt;- 19
+<pre class="text"><code>value &lt;- 19 # next, change `value` to `birth_year`
 
-filter(starwars, birth_year == UQ(value))</code></pre>
+filter(starwars, birth_year == !!value) # change `value` to `birth_year`</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
 <p>To convince yourself that the code above is resistant to mischief, change both instances of <code>value</code> to <code>birth_date</code> and rerun.</p>
 <p>There is another thing we can do here, instead of evaluating the filter statement then printing out the data, we can capture the set of instructions, the expression, and print that instead. To do that, we use the <code>quo()</code> function.</p>
 <div class="tutorial-exercise" data-label="filter-uq-value-quo" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>value &lt;- 19
+<pre class="text"><code>value &lt;- 19 
 
 quo(
-  filter(starwars, birth_year == UQ(value))
+  filter(starwars, birth_year == !!value)
 )</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
 <p>Run this code to see what happens. Switch <code>value</code> with <code>birth_year</code> again, if you like.</p>
-<p>We see again, this word “quosure”. Again, let’s think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions (<code>~filter(starwars, birth_year == 19)</code>), and we are given an indication of the materials (<code>local</code>). For now, we can use the <code>quo()</code> function to verify that our instructions are what we expect.</p>
+<p>We see again, this word “quosure”. Again, let’s think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions <code>~filter(starwars, birth_year == 19)</code>, and we are given an indication of the materials, <code>0x7fca3107a468</code> (a memory location). For now, we can use the <code>quo()</code> function to verify that our instructions are what we expect.</p>
 <hr />
 <p>Our next step is to specify the data frame and the column to filter. Recall that symbols can be used to compose expressions. Tidyeval provides a function to convert strings into symbols, <code>sym()</code>.</p>
 <pre class="r"><code>sym(&quot;foo&quot;)</code></pre>
@@ -341,16 +343,16 @@ quo(
 <p>This code does not work… yet.</p>
 <div class="tutorial-exercise" data-label="filter-sym" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>df &lt;- starwars
-var_name &lt;- &quot;birth_date&quot;
+var_name &lt;- &quot;birth_year&quot;
 value &lt;- 19
 
 quo(
-  filter(df, sym(var_name) == UQ(value))
+  filter(df, sym(var_name) == !!value)
 )</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
 <p>As you can see, this doesn’t look right. If only there were a way that we could evaluate <code>sym(var_name)</code> and incorporate the result into the expression…</p>
-<p>Also notice that we don’t have to do anything special with the first argument to <code>filter()</code>. We can replace the argument with an equivalent object and get the same result; <code>filter()</code> is <strong>referentially transparent</strong> for this argument.</p>
+<p>Also notice that we don’t have to do anything special with the first argument to <code>filter()</code>, the data frame. We can replace this data frame with an equivalent data frame and get the same result; <code>filter()</code> is <strong>referentially transparent</strong> for this argument.</p>
 <p>Finally, if you like, remove the <code>quo()</code> to make sure it still returns the data we expect.</p>
 <hr />
 </div>
@@ -363,7 +365,7 @@ var_name &lt;- &quot;parsec&quot;
 # parsec &lt;- 12
 value &lt;- 19
 
-filter(df, UQ(sym(var_name)) == UQ(value))</code></pre>
+filter(df, !!sym(var_name) == !!value)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
 <p>Run this as is, and we get an error-message that <code>parsec</code> is not found. Clearly, it is not a column in the data-frame, and it is not in our context. But what if it were in our context? Uncomment the <code>parsec &lt;- 12</code> line and rerun. What happens? Why?</p>
@@ -372,20 +374,22 @@ filter(df, UQ(sym(var_name)) == UQ(value))</code></pre>
 <p>Here are some examples:</p>
 <pre class="r"><code>filter(starwars, .data$birth_year == 19)</code></pre>
 <pre><code>#&gt; # A tibble: 2 x 13
-#&gt;             name height  mass hair_color skin_color eye_color birth_year gender homeworld species
-#&gt;            &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;
-#&gt; 1 Luke Skywalker    172    77      blond       fair      blue         19   male  Tatooine   Human
-#&gt; 2    Leia Organa    150    49      brown      light     brown         19 female  Alderaan   Human
-#&gt; # ... with 3 more variables: films &lt;list&gt;, vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name           height  mass hair_color skin_color eye_color birth_year gender
+#&gt;   &lt;chr&gt;           &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 Luke Skywalker    172   77. blond      fair       blue             19. male  
+#&gt; 2 Leia Organa       150   49. brown      light      brown            19. female
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <pre class="r"><code>filter(mtcars, .data$birth_year == 19)</code></pre>
 <pre><code>#&gt; Error in filter_impl(.data, quo): Evaluation error: Column `birth_year`: not found in data.</code></pre>
 <pre class="r"><code>filter(starwars, .data[[&quot;birth_year&quot;]] == 19)</code></pre>
 <pre><code>#&gt; # A tibble: 2 x 13
-#&gt;             name height  mass hair_color skin_color eye_color birth_year gender homeworld species
-#&gt;            &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt;      &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;      &lt;dbl&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;
-#&gt; 1 Luke Skywalker    172    77      blond       fair      blue         19   male  Tatooine   Human
-#&gt; 2    Leia Organa    150    49      brown      light     brown         19 female  Alderaan   Human
-#&gt; # ... with 3 more variables: films &lt;list&gt;, vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
+#&gt;   name           height  mass hair_color skin_color eye_color birth_year gender
+#&gt;   &lt;chr&gt;           &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; 
+#&gt; 1 Luke Skywalker    172   77. blond      fair       blue             19. male  
+#&gt; 2 Leia Organa       150   49. brown      light      brown            19. female
+#&gt; # ... with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
+#&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 </div>
 <div id="section-your-turn-6" class="section level5">
 <h5>Your turn</h5>
@@ -396,7 +400,7 @@ var_name &lt;- &quot;parsec&quot;
 # parsec &lt;- 12
 value &lt;- 19
 
-filter(df, UQ(sym(var_name)) == UQ(value))</code></pre>
+filter(df, !!sym(var_name) == !!value)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
 <p>When we use tidyeval with dplyr functions, dplyr evaluates the expressions that you provide. It can be useful to keep in mind what the dplyr function is evaluating <em>to</em>. <code>filter()</code> evaluates its expressions to logical values - it wants <code>TRUE</code> or <code>FALSE</code>. Some dplyr functions do things a little differently, let’s look at some of those differences.</p>
@@ -412,18 +416,18 @@ filter(df, UQ(sym(var_name)) == UQ(value))</code></pre>
 <p>Let’s look at some examples of these principles in action. The usual way to call a select function is just to use the bare column-names, which we now know as symbols.</p>
 <pre class="r"><code>select(starwars, name, species : starships)</code></pre>
 <pre><code>#&gt; # A tibble: 87 x 5
-#&gt;                  name species     films  vehicles starships
-#&gt;                 &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;    &lt;list&gt;    &lt;list&gt;
-#&gt;  1     Luke Skywalker   Human &lt;chr [5]&gt; &lt;chr [2]&gt; &lt;chr [2]&gt;
-#&gt;  2              C-3PO   Droid &lt;chr [6]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  3              R2-D2   Droid &lt;chr [7]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  4        Darth Vader   Human &lt;chr [4]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
-#&gt;  5        Leia Organa   Human &lt;chr [5]&gt; &lt;chr [1]&gt; &lt;chr [0]&gt;
-#&gt;  6          Owen Lars   Human &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  7 Beru Whitesun lars   Human &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  8              R5-D4   Droid &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  9  Biggs Darklighter   Human &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
-#&gt; 10     Obi-Wan Kenobi   Human &lt;chr [6]&gt; &lt;chr [1]&gt; &lt;chr [5]&gt;
+#&gt;    name               species films     vehicles  starships
+#&gt;    &lt;chr&gt;              &lt;chr&gt;   &lt;list&gt;    &lt;list&gt;    &lt;list&gt;   
+#&gt;  1 Luke Skywalker     Human   &lt;chr [5]&gt; &lt;chr [2]&gt; &lt;chr [2]&gt;
+#&gt;  2 C-3PO              Droid   &lt;chr [6]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  3 R2-D2              Droid   &lt;chr [7]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  4 Darth Vader        Human   &lt;chr [4]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
+#&gt;  5 Leia Organa        Human   &lt;chr [5]&gt; &lt;chr [1]&gt; &lt;chr [0]&gt;
+#&gt;  6 Owen Lars          Human   &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  7 Beru Whitesun lars Human   &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  8 R5-D4              Droid   &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  9 Biggs Darklighter  Human   &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
+#&gt; 10 Obi-Wan Kenobi     Human   &lt;chr [6]&gt; &lt;chr [1]&gt; &lt;chr [5]&gt;
 #&gt; # ... with 77 more rows</code></pre>
 <p>We get an identical result if we specify the column-positions explicitly.</p>
 <pre class="r"><code>select(starwars, 1, 10 : 13)</code></pre>
@@ -438,21 +442,22 @@ filter(df, UQ(sym(var_name)) == UQ(value))</code></pre>
 #&gt; Attaching package: &#39;tidyselect&#39;</code></pre>
 <pre><code>#&gt; The following objects are masked from &#39;package:dplyr&#39;:
 #&gt; 
-#&gt;     contains, ends_with, everything, matches, num_range, one_of, starts_with</code></pre>
+#&gt;     contains, ends_with, everything, matches, num_range, one_of,
+#&gt;     starts_with</code></pre>
 <pre class="r"><code>select(starwars, .data$name, .data$species : last_col())</code></pre>
 <pre><code>#&gt; # A tibble: 87 x 5
-#&gt;                  name species     films  vehicles starships
-#&gt;                 &lt;chr&gt;   &lt;chr&gt;    &lt;list&gt;    &lt;list&gt;    &lt;list&gt;
-#&gt;  1     Luke Skywalker   Human &lt;chr [5]&gt; &lt;chr [2]&gt; &lt;chr [2]&gt;
-#&gt;  2              C-3PO   Droid &lt;chr [6]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  3              R2-D2   Droid &lt;chr [7]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  4        Darth Vader   Human &lt;chr [4]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
-#&gt;  5        Leia Organa   Human &lt;chr [5]&gt; &lt;chr [1]&gt; &lt;chr [0]&gt;
-#&gt;  6          Owen Lars   Human &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  7 Beru Whitesun lars   Human &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  8              R5-D4   Droid &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
-#&gt;  9  Biggs Darklighter   Human &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
-#&gt; 10     Obi-Wan Kenobi   Human &lt;chr [6]&gt; &lt;chr [1]&gt; &lt;chr [5]&gt;
+#&gt;    name               species films     vehicles  starships
+#&gt;    &lt;chr&gt;              &lt;chr&gt;   &lt;list&gt;    &lt;list&gt;    &lt;list&gt;   
+#&gt;  1 Luke Skywalker     Human   &lt;chr [5]&gt; &lt;chr [2]&gt; &lt;chr [2]&gt;
+#&gt;  2 C-3PO              Droid   &lt;chr [6]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  3 R2-D2              Droid   &lt;chr [7]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  4 Darth Vader        Human   &lt;chr [4]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
+#&gt;  5 Leia Organa        Human   &lt;chr [5]&gt; &lt;chr [1]&gt; &lt;chr [0]&gt;
+#&gt;  6 Owen Lars          Human   &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  7 Beru Whitesun lars Human   &lt;chr [3]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  8 R5-D4              Droid   &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [0]&gt;
+#&gt;  9 Biggs Darklighter  Human   &lt;chr [1]&gt; &lt;chr [0]&gt; &lt;chr [1]&gt;
+#&gt; 10 Obi-Wan Kenobi     Human   &lt;chr [6]&gt; &lt;chr [1]&gt; &lt;chr [5]&gt;
 #&gt; # ... with 77 more rows</code></pre>
 <div id="section-your-turn-7" class="section level5">
 <h5>Your turn</h5>
@@ -473,18 +478,18 @@ select(starwars, name, species : starships)</code></pre>
   group_by(species) %&gt;%
   summarise(birth_year_min = min(birth_year, na.rm = TRUE)) </code></pre>
 <pre><code>#&gt; # A tibble: 38 x 2
-#&gt;      species birth_year_min
-#&gt;        &lt;chr&gt;          &lt;dbl&gt;
-#&gt;  1    Aleena            Inf
-#&gt;  2  Besalisk            Inf
-#&gt;  3    Cerean             92
-#&gt;  4  Chagrian            Inf
-#&gt;  5  Clawdite            Inf
-#&gt;  6     Droid             15
-#&gt;  7       Dug            Inf
-#&gt;  8      Ewok              8
-#&gt;  9 Geonosian            Inf
-#&gt; 10    Gungan             52
+#&gt;    species   birth_year_min
+#&gt;    &lt;chr&gt;              &lt;dbl&gt;
+#&gt;  1 Aleena              Inf 
+#&gt;  2 Besalisk            Inf 
+#&gt;  3 Cerean               92.
+#&gt;  4 Chagrian            Inf 
+#&gt;  5 Clawdite            Inf 
+#&gt;  6 Droid                15.
+#&gt;  7 Dug                 Inf 
+#&gt;  8 Ewok                  8.
+#&gt;  9 Geonosian           Inf 
+#&gt; 10 Gungan               52.
 #&gt; # ... with 28 more rows</code></pre>
 <p>Now I want to parameterise this, in case I want to do the same thing with height. (You are likely suspecting that we should really be making a function to do this - which we will in the next section of this tutorial.)</p>
 <p>Here’s one way to do it:</p>
@@ -494,24 +499,24 @@ var_min &lt;- paste0(var_to_min, &quot;_min&quot;)
 
 starwars %&gt;%
   group_by(species) %&gt;%
-  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) </code></pre>
+  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) </code></pre>
 <pre><code>#&gt; # A tibble: 38 x 2
-#&gt;      species birth_year_min
-#&gt;        &lt;chr&gt;          &lt;dbl&gt;
-#&gt;  1    Aleena            Inf
-#&gt;  2  Besalisk            Inf
-#&gt;  3    Cerean             92
-#&gt;  4  Chagrian            Inf
-#&gt;  5  Clawdite            Inf
-#&gt;  6     Droid             15
-#&gt;  7       Dug            Inf
-#&gt;  8      Ewok              8
-#&gt;  9 Geonosian            Inf
-#&gt; 10    Gungan             52
+#&gt;    species   birth_year_min
+#&gt;    &lt;chr&gt;              &lt;dbl&gt;
+#&gt;  1 Aleena              Inf 
+#&gt;  2 Besalisk            Inf 
+#&gt;  3 Cerean               92.
+#&gt;  4 Chagrian            Inf 
+#&gt;  5 Clawdite            Inf 
+#&gt;  6 Droid                15.
+#&gt;  7 Dug                 Inf 
+#&gt;  8 Ewok                  8.
+#&gt;  9 Geonosian           Inf 
+#&gt; 10 Gungan               52.
 #&gt; # ... with 28 more rows</code></pre>
 <p>The first step here is to create a new variable-name by appending <code>&quot;_min&quot;</code> to the variable-name of interest. The second step is to adapt the <code>summarise()</code> expression. Note that it has both a left side (new name) and a right side (value). The good news is that we can use our unquoting tools on both sides. However, the <code>=</code> operator does not support unquoting on the left-side, so we use the <code>:=</code> operator from the <strong>rlang</strong> package - designed just for this purpose.</p>
 <p>The use of the <code>:=</code> operator is the thing that we need to keep in mind when using “namey” functions.</p>
-<p>One other point, because the left-side is going to end up as a name, you can unquote a symbol, <code>UQ(sym(var_min))</code>, or a string, <code>UQ(var_min)</code>.</p>
+<p>One other point, because the left-side is going to end up as a name, you can unquote a symbol, <code>!!sym(var_min)</code>, or a string, <code>!!var_min</code>.</p>
 <div id="section-your-turn-8" class="section level5">
 <h5>Your turn</h5>
 <p>Evaluate this solution for yourself:</p>
@@ -522,7 +527,7 @@ var_min &lt;- paste0(var_to_min, &quot;_min&quot;)
 
 starwars %&gt;%
   group_by(species) %&gt;%
-  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) </code></pre>
+  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) </code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
 <p>Experiment with unquoting the string rather than the symbol, try using different variable names, wrap the call in <code>quo()</code> to see the instructions. Have fun.</p>
@@ -539,11 +544,11 @@ starwars %&gt;%
 var_name &lt;- &quot;birth_date&quot;
 value &lt;- 19
 
-filter(starwars, UQ(sym(var_name)) == UQ(value))</code></pre>
+filter(starwars, !!sym(var_name) == !!value)</code></pre>
 <p>The rest of these examples are in “interactive” mode so that you can experiment with them. Our first step is to wrap this code in a function.</p>
 <div class="tutorial-exercise" data-label="filter-str-function" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>filter_name_value &lt;- function(.data, var_name, value) {
-  dplyr::filter(.data, UQ(sym(var_name)) == UQ(value))  
+  dplyr::filter(.data, !!sym(var_name) == !!value)  
 }
 
 filter_name_value(starwars, &quot;birth_year&quot;, 19)</code></pre>
@@ -552,22 +557,22 @@ filter_name_value(starwars, &quot;birth_year&quot;, 19)</code></pre>
 <p>Try using this function to filter other data frames, for example, <code>filter_name_value(mtcars, &quot;cyl&quot;, 6)</code>.</p>
 <div id="section-package-considerations" class="section level3">
 <h3>Package considerations</h3>
-<p>As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. <code>dplyr::filter()</code> rather than <code>filter()</code>. For commonly-used fundamental functions, like <code>UQ()</code> and <code>sym()</code>, from <strong>rlang</strong>, we can import these into the package itself, avoiding the need prepend with <code>rlang::</code>. For example, see <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R"><code>utils-tidy-eval.R</code></a> in the package’s R directory.</p>
-<p>As of the writing of this tutorial, the tidyverse folks are working on a new package <a href="https://github.com/r-lib/usethis"><strong>usethis</strong></a>, that will make it very easy for you to use tidyeval functions in your package-functions, <em>and</em> pass R CMD CHECK. The <code>use_tidyeval()</code> function, used to generate <code>utils-tidy-eval.R</code>, is not on CRAN yet (2017-11-01), but I imagine it will be there soon.</p>
-<p>To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function <code>ex_filter_name_value()</code> in this package, you can inspect it <a href="">here</a>. Try it out, i.e. <code>ex_filter_name_value(mtcars, &quot;cyl&quot;, 6)</code>.</p>
+<p>As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. <code>dplyr::filter()</code> rather than <code>filter()</code>. For commonly-used fundamental functions, like <code>quo()</code> and <code>sym()</code>, from <strong>rlang</strong>, we can import these into the package itself, avoiding the need prepend with <code>rlang::</code>. For example, see <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R"><code>utils-tidy-eval.R</code></a> in the package’s R directory.</p>
+<p>The <a href="https://github.com/r-lib/usethis"><strong>usethis</strong></a> package makes it very easy for you to use tidyeval functions in your package-functions, <em>and</em> pass R CMD CHECK. I used the <code>use_tidyeval()</code> function to generate <code>utils-tidy-eval.R</code>, for example.</p>
+<p>To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function <code>ex_filter_name_value()</code> in this package, you can inspect it <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R">here</a>. Try it out, i.e. <code>ex_filter_name_value(mtcars, &quot;cyl&quot;, 6)</code>.</p>
 </div>
 <div id="section-quosures" class="section level3">
 <h3>Quosures</h3>
 <p>We have written a function that seems to work for a variety of cases, let’s work to make this code look-and-feel a little more like “dplyr”. We would like to use a bare symbol, rather than a string.</p>
 <p>Consider the function <code>filter_quo_value()</code> in the exercise below. The operative expression is</p>
-<pre class="r"><code>UQ(var_quo) == UQ(value)</code></pre>
-<p>On the right-hand side, inside the <code>UQ()</code>, we want something that evaluates to a value. On the left-hand side, inside the <code>UQ()</code>, we want something that evaluates to an expression (a set of instructions).</p>
+<pre class="r"><code>!!var_quo == !!value</code></pre>
+<p>On the right-hand side, following the <code>!!</code>, we want something that evaluates to a value. On the left-hand side, following the <code>!!</code>, we want something that evaluates to an expression (a set of instructions).</p>
 <p>We have a tool for encapsulating an expression: <code>quo()</code>, which builds a quosure. In this case, we are not using the context (set of materials) part of the quosure, only the expression.</p>
 <p>To use our function, we wrap the bare name of our column in <code>quo()</code>, in this example: <code>quo(birth_year)</code>.</p>
 <p>Like the example above, experiment with this function.</p>
 <div class="tutorial-exercise" data-label="filter-quo-function" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>filter_quo_value &lt;- function(.data, var_quo, value) {
-  dplyr::filter(.data, UQ(var_quo) == UQ(value))  
+  dplyr::filter(.data, !!var_quo == !!value)  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)</code></pre>
@@ -580,7 +585,7 @@ filter_quo_value(starwars, quo(birth_year), 19)</code></pre>
   
   sym &lt;- enquo(sym)
   
-  dplyr::filter(.data, UQ(sym) == UQ(value)) 
+  dplyr::filter(.data, !!sym == !!value) 
 }
 
 filter_sym_value(starwars, birth_year, 19)</code></pre>
@@ -597,7 +602,7 @@ var_min &lt;- paste0(var_to_min, &quot;_min&quot;)
 
 starwars %&gt;%
   group_by(species) %&gt;%
-  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) </code></pre>
+  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) </code></pre>
 <p>Let’s rewrite this as a function where we want to specify the variable that we minimise and the variable that use for grouping.</p>
 <p>Talk about <code>quo_name()</code>, remind about <code>:=</code>.</p>
 <div class="tutorial-exercise" data-label="renaming-variables" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
@@ -606,12 +611,12 @@ starwars %&gt;%
   var_group &lt;- enquo(var_group)
   var_min &lt;- enquo(var_min)
   
-  name_var_min &lt;- rlang::quo_name(var_min)
+  name_var_min &lt;- quo_name(var_min)
   name_var_new &lt;- paste0(name_var_min, &quot;_min&quot;)
   
   .data %&gt;%
-    dplyr::group_by(UQ(var_group)) %&gt;%
-    dplyr::summarise(UQ(name_var_new) := min(UQ(var_min), na.rm = TRUE))
+    dplyr::group_by(!!var_group) %&gt;%
+    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
 
 summarise_min(starwars, birth_year, species)</code></pre>
@@ -620,7 +625,7 @@ summarise_min(starwars, birth_year, species)</code></pre>
 </div>
 <div id="section-multiple-variables" class="section level3">
 <h3>Multiple variables</h3>
-<p>Let’s say we want to specify more than one grouping variable. Talk about using <code>quos()</code> to capture the <code>...</code> into a list of quosures. Talk about using <code>UQS()</code> to unquote a list of quosures.</p>
+<p>Let’s say we want to specify more than one grouping variable. Talk about using <code>quos()</code> to capture the <code>...</code> into a list of quosures. Talk about using <code>!!!</code> to unquote a list of quosures.</p>
 <div class="tutorial-exercise" data-label="multiple-variables" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>summarise_more_min &lt;- function(.data, var_min, ...) {
   
@@ -631,8 +636,8 @@ summarise_min(starwars, birth_year, species)</code></pre>
   name_var_new &lt;- paste0(name_var_min, &quot;_min&quot;)
   
   .data %&gt;%
-    dplyr::group_by(UQS(var_group)) %&gt;%
-    dplyr::summarise(UQ(name_var_new) := min(UQ(var_min), na.rm = TRUE))
+    dplyr::group_by(!!!var_group) %&gt;%
+    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
 
 summarise_more_min(starwars, birth_year, species, hair_color)</code></pre>
@@ -649,15 +654,32 @@ summarise_more_min(starwars, birth_year, species, hair_color)</code></pre>
 <li><a href="https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/">Erratum tidyr 0.7.0</a></li>
 </ul>
 <p>There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval. Mara Averick has the canonical <a href="https://maraaverick.rbind.io/2017/08/tidyeval-resource-roundup/">tidyeval resource roundup</a>, so the best thing I can do here is to point you that-a-way.</p>
+<div class="tutorial-exercise" data-label="ggplot2" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>library(&quot;rlang&quot;)
+library(&quot;ggplot2&quot;)
+
+input_dataset &lt;- &quot;diamonds&quot;
+input_x &lt;- &quot;carat&quot;
+input_y &lt;- &quot;price&quot;
+input_color &lt;- &quot;cut&quot;
+
+df &lt;- eval_tidy(!!sym(input_dataset))
+
+ggplot(
+  data = df, aes(!!sym(input_x), !!sym(input_y))
+) + geom_point()</code></pre>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
+</div>
 
 <script type="application/shiny-prerendered" data-context="server-start">
-library("learnr")
-library("dplyr")
-library("tibble")
 library("glue")
+library("dplyr")
+library("learnr")
+library("tibble")
+library("ggplot2")
 library("learnr.tidyeval")
 
-options(width = 100)
+options(width = 80)
 knitr::opts_chunk$set(comment = "#>")
 </script>
  
@@ -769,9 +791,16 @@ output$`tutorial-exercise-multiple-variables-output` <- renderUI({
   `tutorial-exercise-multiple-variables-result`()
 })
 </script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-ggplot2-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-ggplot2-code-editor`)), session)
+output$`tutorial-exercise-ggplot2-output` <- renderUI({
+  `tutorial-exercise-ggplot2-result`()
+})
+</script>
  <!--html_preserve-->
 <script type="application/shiny-prerendered" data-context="dependencies">
-{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["jquery"]},{"type":"character","attributes":{},"value":["1.11.3"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/jquery-1.11.3"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["jquery.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["bootstrap"]},{"type":"character","attributes":{},"value":["3.3.5"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/bootstrap-3.3.5"]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["viewport"]}},"value":[{"type":"character","attributes":{},"value":["width=device-width, initial-scale=1"]}]},{"type":"character","attributes":{},"value":["js/bootstrap.min.js","shim/html5shiv.min.js","shim/respond.min.js"]},{"type":"character","attributes":{},"value":["css/cerulean.min.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["highlightjs"]},{"type":"character","attributes":{},"value":["1.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["href"]}},"value":[{"type":"character","attributes":{},"value":["tidyeval_files/highlightjs-1.1"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["highlight.js"]},{"type":"character","attributes":{},"value":["textmate.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial"]},{"type":"character","attributes":{},"value":["0.9"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial.js"]},{"type":"character","attributes":{},"value":["tutorial.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-autocompletion"]},{"type":"character","attributes":{},"value":["0.9"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-autocompletion.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-diagnostics"]},{"type":"character","attributes":{},"value":["0.9"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-diagnostics.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-format"]},{"type":"character","attributes":{},"value":["0.9"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmarkdown/templates/tutorial/resources"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-format.js"]},{"type":"character","attributes":{},"value":["tutorial-format.css","rstudio-theme.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["jquery"]},{"type":"character","attributes":{},"value":["1.11.3"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/jquery-1.11.3"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["jquery.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["font-awesome"]},{"type":"character","attributes":{},"value":["4.5.0"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/font-awesome-4.5.0"]}]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["css/font-awesome.min.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["bootbox"]},{"type":"character","attributes":{},"value":["4.4.0"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/bootbox"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["bootbox.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["localforage"]},{"type":"character","attributes":{},"value":["1.5"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/localforage"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["localforage.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial"]},{"type":"character","attributes":{},"value":["0.9"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial.js"]},{"type":"character","attributes":{},"value":["tutorial.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-autocompletion"]},{"type":"character","attributes":{},"value":["0.9"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-autocompletion.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-diagnostics"]},{"type":"character","attributes":{},"value":["0.9"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-diagnostics.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]}]}
+{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["jquery"]},{"type":"character","attributes":{},"value":["1.11.3"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/jquery-1.11.3"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["jquery.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["bootstrap"]},{"type":"character","attributes":{},"value":["3.3.5"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/bootstrap-3.3.5"]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["viewport"]}},"value":[{"type":"character","attributes":{},"value":["width=device-width, initial-scale=1"]}]},{"type":"character","attributes":{},"value":["js/bootstrap.min.js","shim/html5shiv.min.js","shim/respond.min.js"]},{"type":"character","attributes":{},"value":["css/cerulean.min.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["highlightjs"]},{"type":"character","attributes":{},"value":["9.12.0"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/highlightjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["highlight.js"]},{"type":"character","attributes":{},"value":["textmate.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial.js"]},{"type":"character","attributes":{},"value":["tutorial.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-autocompletion"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-autocompletion.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-diagnostics"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-diagnostics.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-format"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmarkdown/templates/tutorial/resources"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-format.js"]},{"type":"character","attributes":{},"value":["tutorial-format.css","rstudio-theme.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["jquery"]},{"type":"character","attributes":{},"value":["1.11.3"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/jquery-1.11.3"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["jquery.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["font-awesome"]},{"type":"character","attributes":{},"value":["5.0.13"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/fontawesome"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["js/fontawesome-all.min.js","js/fa-v4-shims.min.js"]},{"type":"character","attributes":{},"value":["css/fa-svg-with-js.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["bootbox"]},{"type":"character","attributes":{},"value":["4.4.0"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/bootbox"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["bootbox.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["localforage"]},{"type":"character","attributes":{},"value":["1.5"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/localforage"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["localforage.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial.js"]},{"type":"character","attributes":{},"value":["tutorial.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-autocompletion"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-autocompletion.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-diagnostics"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-diagnostics.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]}]}
 </script>
 <!--/html_preserve-->
 </div>

@@ -10,5 +10,5 @@
 #' @export
 #'
 ex_filter_name_value <- function(.data, var_name, value) {
-  dplyr::filter(.data, UQ(sym(var_name)) == UQ(value))
+  dplyr::filter(.data, !!sym(var_name) == !!value)
 }

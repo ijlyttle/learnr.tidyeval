@@ -8,20 +8,18 @@ runtime: shiny_prerendered
 ---
 
 ```{r setup, include=FALSE}
-library("learnr")
-library("dplyr")
-library("tibble")
 library("glue")
+library("dplyr")
+library("learnr")
+library("tibble")
+library("ggplot2")
 library("learnr.tidyeval")
 
-options(width = 100)
+options(width = 80)
 knitr::opts_chunk$set(comment = "#>")
 ```
 
-
 ## Introduction
-
-(Note: I think this tutorial is almost ready. I have run out of gas on a few sections and I way want to add a little more supporting material. Otherwise, ready to start showing this around.)
 
 Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I _thought_ I understood it, I _seemed_ to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here's a receipt:
 
@@ -35,6 +33,7 @@ Of course, none of this material is possible without the work done by Lionel Hen
 - [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
 - [Tidy evaluation](http://rlang.tidyverse.org/articles/tidy-evaluation.html)
 - [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
+- [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
 
 I am particularly impressed with the "Erratum" article, as it explains very well the factors that went into a design choice, as well as the factors that went into the decision to modify that choice.
 
@@ -42,9 +41,7 @@ The goal of this tutorial is to make it easier for you to tackle these reference
 
 As you go through this tutorial, please keep in mind that I am an imperfect interpreter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will rectify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)). 
 
-Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I have the greatest respect for the work made by Hadley and Lionel to incorporate quasiquotation theory into tidyeval. It is a mark of that respect and of my lack of familiarity with the theory that I avoid addressing it, and instead enthusiastically refer you to their material.
-
-One more thing (still here?), for the purpose of this tutorial, I have shied away from using the `!!` and `!!!` operators. I have nothing against them; I rather like using them. However, there are a few cases where you can run into trouble, so I decided to leave learning their use as a further exercise to the reader.
+Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I think that understanding the theory can be helpful (I hope to do so someday), but I don't think it is a pre-requisite for using the tools.
 
 One final note - this tutorial is produced using the [__learnr__ package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactive exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
 
@@ -70,7 +67,7 @@ As well, you may have used dplyr to access databases. If the `starwars` tibble w
 
 ### Things to keep in mind
 
-However, as [Jar Jar discovered](https://youtu.be/qL1fBDQXSy8?t=1m40s), there is no such thing as a free lunch. There are a couple things to be mindful of.
+As [Jar Jar discovered](https://youtu.be/qL1fBDQXSy8?t=1m40s), there is no such thing as a free lunch. There are a couple things to be mindful of.
 
 #### Referential transparency
 
@@ -207,9 +204,7 @@ You can compose expressions using __symbols__; in this case, `species` is a symb
 
 It may not be evident how to build expression for dplyr to evaluate. We will see how the tidyeval framework lets you build expressions using symbols that you can create at runtime.
 
-If you are already a little familiar with tidyeval, you have heard about __quosures__. These are the central feature of tidyeval. However, I'm not going to say too much about quosures just yet. In the Star Wars movies, Yoda was not introduced until the second movie was released, even though he is a pivotal character.
-
-For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. We will look at quosures more explicitly later in this tutorial.
+If you are already a little familiar with tidyeval, you have heard about __quosures__. These are the central feature of tidyeval. For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. We will look at quosures more explicitly later in this tutorial.
 
 > "Patience, for the Jedi it is time to eat as well." - a certain Jedi Master
 
@@ -272,16 +267,16 @@ glue("We want rows where the birth_year is {value}.")
 Recall that we are composing a string by unquoting: `{name}` is replaced with value of `name`, using the context from which `glue()` is called. 
 
 Instead of composing strings we need to compose expressions, so Tidyeval provides an __unquoting__ function.
-The `UQ()` function acts on expressions in tidyeval like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result into the expression.
+The `!!` operator acts on expressions in tidyeval like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result into the expression.
 
 ##### Your turn
 
 Make sure this works:
 
 ```{r filter-uq-value, exercise=TRUE}
-value <- 19
+value <- 19 # next, change `value` to `birth_year`
 
-filter(starwars, birth_year == UQ(value))
+filter(starwars, birth_year == !!value) # change `value` to `birth_year`
 ```
 
 To convince yourself that the code above is resistant to mischief, change both instances of `value` to `birth_date` and rerun.
@@ -289,16 +284,16 @@ To convince yourself that the code above is resistant to mischief, change both i
 There is another thing we can do here, instead of evaluating the filter statement then printing out the data, we can capture the set of instructions, the expression, and print that instead. To do that, we use the `quo()` function.
 
 ```{r filter-uq-value-quo, exercise=TRUE}
-value <- 19
+value <- 19 
 
 quo(
-  filter(starwars, birth_year == UQ(value))
+  filter(starwars, birth_year == !!value)
 )
 ```
 
 Run this code to see what happens. Switch `value` with `birth_year` again, if you like.
 
-We see again, this word "quosure". Again, let's think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions (`~filter(starwars, birth_year == 19)`), and we are given an indication of the materials (`local`). For now, we can use the `quo()` function to verify that our instructions are what we expect.
+We see again, this word "quosure". Again, let's think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions `~filter(starwars, birth_year == 19)`, and we are given an indication of the materials, `0x7fca3107a468` (a memory location). For now, we can use the `quo()` function to verify that our instructions are what we expect.
 
 -----
 
@@ -316,17 +311,17 @@ This code does not work... yet.
 
 ```{r filter-sym, exercise=TRUE}
 df <- starwars
-var_name <- "birth_date"
+var_name <- "birth_year"
 value <- 19
 
 quo(
-  filter(df, sym(var_name) == UQ(value))
+  filter(df, sym(var_name) == !!value)
 )
 ```
 
 As you can see, this doesn't look right. If only there were a way that we could evaluate `sym(var_name)` and incorporate the result into the expression...
 
-Also notice that we don't have to do anything special with the first argument to `filter()`. We can replace the argument with an equivalent object and get the same result; `filter()` is __referentially transparent__ for this argument.
+Also notice that we don't have to do anything special with the first argument to `filter()`, the data frame. We can replace this data frame with an equivalent data frame and get the same result; `filter()` is __referentially transparent__ for this argument.
 
 Finally, if you like, remove the `quo()` to make sure it still returns the data we expect.
 
@@ -342,7 +337,7 @@ var_name <- "parsec"
 # parsec <- 12
 value <- 19
 
-filter(df, UQ(sym(var_name)) == UQ(value))
+filter(df, !!sym(var_name) == !!value)
 ```
 
 Run this as is, and we get an error-message that `parsec` is not found. Clearly, it is not a column in the data-frame, and it is not in our context. But what if it were in our context? Uncomment the `parsec <- 12` line and rerun. What happens? Why?
@@ -371,7 +366,7 @@ var_name <- "parsec"
 # parsec <- 12
 value <- 19
 
-filter(df, UQ(sym(var_name)) == UQ(value))
+filter(df, !!sym(var_name) == !!value)
 ```
 
 When we use tidyeval with dplyr functions, dplyr evaluates the expressions that you provide. It can be useful to keep in mind what the dplyr function is evaluating *to*. `filter()` evaluates its expressions to logical values - it wants `TRUE` or `FALSE`. Some dplyr functions do things a little differently, let's look at some of those differences.   
@@ -453,14 +448,14 @@ var_min <- paste0(var_to_min, "_min")
 
 starwars %>%
   group_by(species) %>%
-  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) 
+  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) 
 ```
 
 The first step here is to create a new variable-name by appending `"_min"` to the variable-name of interest. The second step is to adapt the `summarise()` expression. Note that it has both a left side (new name) and a right side (value). The good news is that we can use our unquoting tools on both sides. However, the `=` operator does not support unquoting on the left-side, so we use the `:=` operator from the __rlang__ package - designed just for this purpose. 
 
 The use of the `:=` operator is the thing that we need to keep in mind when using "namey" functions. 
 
-One other point, because the left-side is going to end up as a name, you can unquote a symbol, `UQ(sym(var_min))`, or a string, `UQ(var_min)`.
+One other point, because the left-side is going to end up as a name, you can unquote a symbol, `!!sym(var_min)`, or a string, `!!var_min`.
 
 ##### Your turn
 
@@ -473,7 +468,7 @@ var_min <- paste0(var_to_min, "_min")
 
 starwars %>%
   group_by(species) %>%
-  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) 
+  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) 
 ```
 
 Experiment with unquoting the string rather than the symbol, try using different variable names, wrap the call in `quo()` to see the instructions. Have fun.
@@ -493,14 +488,14 @@ df <- starwars
 var_name <- "birth_date"
 value <- 19
 
-filter(starwars, UQ(sym(var_name)) == UQ(value))
+filter(starwars, !!sym(var_name) == !!value)
 ```
 
 The rest of these examples are in "interactive" mode so that you can experiment with them. Our first step is to wrap this code in a function.
 
 ```{r filter-str-function, exercise=TRUE}
 filter_name_value <- function(.data, var_name, value) {
-  dplyr::filter(.data, UQ(sym(var_name)) == UQ(value))  
+  dplyr::filter(.data, !!sym(var_name) == !!value)  
 }
 
 filter_name_value(starwars, "birth_year", 19)
@@ -510,11 +505,11 @@ Try using this function to filter other data frames, for example, `filter_name_v
 
 ### Package considerations
 
-As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `UQ()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
+As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
 
-As of the writing of this tutorial, the tidyverse folks are working on a new package [__usethis__](https://github.com/r-lib/usethis), that will make it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. The `use_tidyeval()` function, used to generate `utils-tidy-eval.R`, is not on CRAN yet (2017-11-01), but I imagine it will be there soon.
+The [__usethis__](https://github.com/r-lib/usethis) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. I used the `use_tidyeval()` function to generate `utils-tidy-eval.R`, for example.
 
-To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](). Try it out, i.e. `ex_filter_name_value(mtcars, "cyl", 6)`.
+To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). Try it out, i.e. `ex_filter_name_value(mtcars, "cyl", 6)`.
 
 ### Quosures
 
@@ -523,12 +518,12 @@ We have written a function that seems to work for a variety of cases, let's work
 Consider the function `filter_quo_value()` in the exercise below. The operative expression is
 
 ```r
-UQ(var_quo) == UQ(value)
+!!var_quo == !!value
 ```
 
-On the right-hand side, inside the `UQ()`, we want something that evaluates to a value. On the left-hand side, inside the `UQ()`, we want something that evaluates to an expression (a set of instructions). 
+On the right-hand side, following the `!!`, we want something that evaluates to a value. On the left-hand side, following the `!!`, we want something that evaluates to an expression (a set of instructions). 
 
-We have a tool for encapsulating an expression: `quo()`, which builds a quosure. In this case, we are not using  the context (set of materials) part of the quosure, only the expression. 
+We have a tool for encapsulating an expression: `quo()`, which builds a quosure. In this case, we are not using the context (set of materials) part of the quosure, only the expression. 
 
 To use our function, we wrap the bare name of our column in `quo()`, in this example: `quo(birth_year)`.
 
@@ -536,7 +531,7 @@ Like the example above, experiment with this function.
 
 ```{r filter-quo-function, exercise=TRUE}
 filter_quo_value <- function(.data, var_quo, value) {
-  dplyr::filter(.data, UQ(var_quo) == UQ(value))  
+  dplyr::filter(.data, !!var_quo == !!value)  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)
@@ -551,7 +546,7 @@ filter_sym_value <- function(.data, sym, value) {
   
   sym <- enquo(sym)
   
-  dplyr::filter(.data, UQ(sym) == UQ(value)) 
+  dplyr::filter(.data, !!sym == !!value) 
 }
 
 filter_sym_value(starwars, birth_year, 19)
@@ -570,7 +565,7 @@ var_min <- paste0(var_to_min, "_min")
 
 starwars %>%
   group_by(species) %>%
-  summarise(UQ(sym(var_min)) := min(UQ(sym(var_to_min)), na.rm = TRUE)) 
+  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) 
 ```
 
 Let's rewrite this as a function where we want to specify the variable that we minimise and the variable that use for grouping.
@@ -583,12 +578,12 @@ summarise_min <- function(.data, var_min, var_group) {
   var_group <- enquo(var_group)
   var_min <- enquo(var_min)
   
-  name_var_min <- rlang::quo_name(var_min)
+  name_var_min <- quo_name(var_min)
   name_var_new <- paste0(name_var_min, "_min")
   
   .data %>%
-    dplyr::group_by(UQ(var_group)) %>%
-    dplyr::summarise(UQ(name_var_new) := min(UQ(var_min), na.rm = TRUE))
+    dplyr::group_by(!!var_group) %>%
+    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
 
 summarise_min(starwars, birth_year, species)
@@ -596,7 +591,7 @@ summarise_min(starwars, birth_year, species)
 
 ### Multiple variables
 
-Let's say we want to specify more than one grouping variable. Talk about using `quos()` to capture the `...` into a list of quosures. Talk about using `UQS()` to unquote a list of quosures.
+Let's say we want to specify more than one grouping variable. Talk about using `quos()` to capture the `...` into a list of quosures. Talk about using `!!!` to unquote a list of quosures.
 
 ```{r multiple-variables, exercise=TRUE}
 summarise_more_min <- function(.data, var_min, ...) {
@@ -608,8 +603,8 @@ summarise_more_min <- function(.data, var_min, ...) {
   name_var_new <- paste0(name_var_min, "_min")
   
   .data %>%
-    dplyr::group_by(UQS(var_group)) %>%
-    dplyr::summarise(UQ(name_var_new) := min(UQ(var_min), na.rm = TRUE))
+    dplyr::group_by(!!!var_group) %>%
+    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
 
 summarise_more_min(starwars, birth_year, species, hair_color)
@@ -625,5 +620,19 @@ Hopefully, you have been able to use this tutorial to get a sense of tidyeval pr
 
 There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval. Mara Averick has the canonical [tidyeval resource roundup](https://maraaverick.rbind.io/2017/08/tidyeval-resource-roundup/), so the best thing I can do here is to point you that-a-way.
 
+```{r ggplot2, exercise=TRUE}
+library("rlang")
+library("ggplot2")
 
+input_dataset <- "diamonds"
+input_x <- "carat"
+input_y <- "price"
+input_color <- "cut"
+
+df <- eval_tidy(!!sym(input_dataset))
+
+ggplot(
+  data = df, aes(!!sym(input_x), !!sym(input_y))
+) + geom_point()
+```
 

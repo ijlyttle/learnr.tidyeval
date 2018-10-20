@@ -1,25 +1,45 @@
 #' Tidy eval helpers
 #'
-#' These functions provide tidy eval-compatible ways to capture
-#' symbols (`sym()`, `syms()`), expressions (`expr()`,
-#' `exprs()`, `enexpr()`), and quosures (`quo()`, `quos()`, `enquo()`).
-#' To learn more about tidy eval and how to use these tools, read
-#' <http://rlang.tidyverse.org/articles/tidy-evaluation.html>
+#' @description
+#'
+#' * \code{\link[rlang]{sym}()} creates a symbol from a string and
+#'   \code{\link[rlang]{syms}()} creates a list of symbols from a
+#'   character vector.
+#'
+#' * \code{\link[rlang]{expr}()} and \code{\link[rlang]{quo}()} quote
+#'   one expression. `quo()` wraps the quoted expression in a quosure.
+#'
+#'   The plural variants [rlang::exprs()] and
+#'   \code{\link[rlang]{quos}()} return a list of quoted expressions or
+#'   quosures.
+#'
+#' * \code{\link[rlang]{enexpr}()} and \code{\link[rlang]{enquo}()}
+#'   capture the expression supplied as argument by the user of the
+#'   current function (`enquo()` wraps this expression in a quosure).
+#'
+#'   \code{\link[rlang]{enexprs}()} and \code{\link[rlang]{enquos}()}
+#'   capture multiple expressions supplied as arguments, including
+#'   `...`.
+#'
+#' `exprs()` is not exported to avoid conflicts with `Biobase::exprs()`,
+#' therefore one should always use `rlang::exprs()`.
+#'
+#' To learn more about tidy eval and how to use these tools, visit
+#' <http://rlang.r-lib.org> and the [Metaprogramming
+#' section](https://adv-r.hadley.nz/meta.html) of [Advanced
+#' R](https://adv-r.hadley.nz).
 #'
 #' @md
-#' @name tidyeval
+#' @name     tidyeval
 #' @keywords internal
-#' @aliases          quo quos enquo sym syms expr exprs enexpr
-#' @importFrom rlang quo quos enquo
-#' @export           quo quos enquo
-#' @importFrom rlang sym syms
-#' @export           sym syms
-#' @importFrom rlang expr exprs enexpr
-#' @export           expr exprs enexpr
-#' @importFrom rlang UQ UQS
-#'
+#' @importFrom rlang quo quos enquo enquos quo_name sym ensym syms
+#'                   ensyms expr exprs enexpr enexprs .data
+#' @aliases  quo quos enquo enquos quo_name
+#'           sym ensym syms ensyms
+#'           expr exprs enexpr enexprs
+#'           .data
+#' @export   quo quos enquo enquos quo_name
+#' @export   sym ensym syms ensyms
+#' @export   expr enexpr enexprs
+#' @export   .data
 NULL
-
-# Flag inline helpers as global variables so R CMD check doesn't warn
-utils::globalVariables(c(":=", ".data", ".env"))
-
