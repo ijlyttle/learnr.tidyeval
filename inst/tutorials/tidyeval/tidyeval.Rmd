@@ -21,12 +21,12 @@ knitr::opts_chunk$set(comment = "#>")
 
 ## Introduction
 
-Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point that I _thought_ I understood it, I _seemed_ to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here's a receipt:
+Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point where I _thought_ I understood it, I _seemed_ to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here's a receipt:
 
 <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, ...)</p>&mdash; Ian Lyttle (@ijlyttle) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-At first glance, tidyeval can seem just as mysterious - a new way to deal with non-standard evaluation. I came to appreciate that tidyeval is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones. At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.
+At first glance, tidyeval might seem just as mysterious - a new way to deal with non-standard evaluation. I came to appreciate that tidyeval is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones. At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.
 
 Of course, none of this material is possible without the work done by Lionel Henry and Hadley Wickham, who developed the tidyeval framework. Indeed, the examples shown here are adapted from their sources:
 
@@ -37,13 +37,9 @@ Of course, none of this material is possible without the work done by Lionel Hen
 
 I am particularly impressed with the "Erratum" article, as it explains very well the factors that went into a design choice, as well as the factors that went into the decision to modify that choice.
 
-The goal of this tutorial is to make it easier for you to tackle these references.
+The goal of this tutorial is to make it easier for you to tackle these references. As you make your way through this, please keep in mind that I am an imperfect interpreter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will rectify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)). 
 
-As you go through this tutorial, please keep in mind that I am an imperfect interpreter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will rectify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)). 
-
-Another thing is that I am purposefully skipping over the theoretical aspects of tidyeval in this tutorial. I think that understanding the theory can be helpful (I hope to do so someday), but I don't think it is a pre-requisite for using the tools.
-
-One final note - this tutorial is produced using the [__learnr__ package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactive exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
+This tutorial is produced using the [__learnr__ package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactive exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
 
 ## What motivates tidyeval?
 
@@ -55,7 +51,7 @@ You are probably used to **dplyr** code that looks like this:
 filter(starwars, species == "Droid")
 ```
 
-This does the same thing as base R code: 
+This does the same thing as this base R code: 
 
 ```{r}
 starwars[starwars$species == "Droid" &  !is.na(starwars$species), ]
@@ -63,7 +59,7 @@ starwars[starwars$species == "Droid" &  !is.na(starwars$species), ]
 
 The dplyr code is more concise - you don't have to repeat the name of the data frame, or specify that you don't want `NA` values.
 
-As well, you may have used dplyr to access databases. If the `starwars` tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression `species == "Droid"` into SQL to obtain the same result. Tidyeval is the framework that dplyr uses to adapt the expression to the situation, so that "it just works".
+As well, you may have used dplyr to access databases. If the `starwars` tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression `species == "Droid"` into SQL to obtain the same result. Tidyeval is the framework that dplyr uses to adapt the expression to the situation, so that it "just works".
 
 ### Things to keep in mind
 
@@ -95,7 +91,7 @@ filter(starwars, my_var == "Droid")
 filter(starwars, species == "Droid")
 ```
 
-As you see, neither of these substitutions works how we expect - so it is not obvious how to call dplyr functions without hard-coding everything.
+As you see, neither of these substitutions works - so it is not immediately obvious how to call dplyr functions without hard-coding everything.
 
 -------
 
@@ -154,8 +150,12 @@ name <- "not Hadley"
 
 "How do you do, name?"
 
+## approach #1
+## -----------
 # paste0("How do you do, ", name, "?")
 
+## approach #2
+## -----------
 # library("glue")
 # glue("How do you do, {name}?")
 ```
@@ -206,7 +206,7 @@ It may not be evident how to build expression for dplyr to evaluate. We will see
 
 If you are already a little familiar with tidyeval, you have heard about __quosures__. These are the central feature of tidyeval. For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. We will look at quosures more explicitly later in this tutorial.
 
-> "Patience, for the Jedi it is time to eat as well." - a certain Jedi Master
+> "Patience, for the Jedi it is time to eat as well." - Yoda
 
 ## Tidyeval and tidyverse 
 
@@ -225,7 +225,7 @@ starwars %>%
 
 As you can see, we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
 
-In the remainder of this tutorial, we are going to use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind going forward, we are restricting ourselves to using these functions with data-sources that are local data-frames. I understand that these principles extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
+In the next sections, we will use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind: this tutorial restricts itself to using these functions with data-sources that are local data-frames. I understand that these principles extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
 
 ## Using functions that use tidyeval
 
@@ -233,14 +233,10 @@ One use for tidyeval is to help you write package functions. Another application
 
 In a shiny app, let's say you want your user to be able to upload a data-frame, filter on some condition, then make a scatterplot, letting your user specify your axes. Let's also say that you want to use the tidyverse. 
 
-For the filtering step, one challenge may be to compose a filtering condition without knowing what the data-frame's variables are. 
-
-For the visualisation step, __ggplot2__ does not currently use tidyeval; instead you use the `aes_string()` function. But, by becoming familiar with tidyeval now, it will be that much easier to use the tidyeval framework in ggplot2 when it arrives.
-
-Let's pick up the filtering example. As you know, the `dplyr::filter()` function takes a series of expressions that it evaluates to `TRUE` or `FALSE` to determine which rows to return. Let's say that you have a shiny app where you have:
+Let's focus here the filtering step, where one challenge may be to compose a filtering condition without knowing what the data-frame's variables are. As you know, the `dplyr::filter()` function takes a series of expressions that it evaluates to `TRUE` or `FALSE` to determine which rows to return. Let's say that you have a shiny app where you have:
 
 - an input that specifies the variable for the filter - this will be a character string
-- an input that specifies the value - this will be a numeric
+- an input that specifies the value - this will be a numeric value
 
 For the sake of simplicity, let's say that we will consider only a single filtering-condition, and that the condition will test equality. For the sake of even more simplicity, let's start out by specifying we will use the `starwars` data; we will filter on `birth_year`, we will vary only the value. 
 
@@ -271,29 +267,27 @@ The `!!` operator acts on expressions in tidyeval like the `{}` acts on strings 
 
 ##### Your turn
 
-Make sure this works:
+1. Run the following code using the starting state: `value <- 19`, and `birth_year == value`. This should return observations for Luke and Leia.
+2. Change these expressions to `birth_year <- 19` and `birth_year == birth_year`, then run the code again. What happens? Why?
+3. Change the second expression to `birth_year == !!birth_year`, then run the code again. Feel better?
 
 ```{r filter-uq-value, exercise=TRUE}
-value <- 19 # next, change `value` to `birth_year`
+value <- 19 
 
-filter(starwars, birth_year == !!value) # change `value` to `birth_year`
+filter(starwars, birth_year == value) 
 ```
 
-To convince yourself that the code above is resistant to mischief, change both instances of `value` to `birth_date` and rerun.
-
-There is another thing we can do here, instead of evaluating the filter statement then printing out the data, we can capture the set of instructions, the expression, and print that instead. To do that, we use the `quo()` function.
+The effect of the `!!` operator is to say, "Evaluate me now using the context where I was created!!". We can see this by using the `quo()` function as a debugging tool. Repeat the three steps above on the following code-block:
 
 ```{r filter-uq-value-quo, exercise=TRUE}
 value <- 19 
 
 quo(
-  filter(starwars, birth_year == !!value)
+  filter(starwars, birth_year == value)
 )
 ```
 
-Run this code to see what happens. Switch `value` with `birth_year` again, if you like.
-
-We see again, this word "quosure". Again, let's think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions `~filter(starwars, birth_year == 19)`, and we are given an indication of the materials, `0x7fca3107a468` (a memory location). For now, we can use the `quo()` function to verify that our instructions are what we expect.
+We see this word "quosure" again. I find it useful to think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions: `~filter(starwars, birth_year == 19)`, and we are given an indication of the materials: something like `0x7fca3107a468` (a memory location for an environment). For now, we can use the `quo()` function to verify that our instructions are what we expect.
 
 -----
 
@@ -319,7 +313,7 @@ quo(
 )
 ```
 
-As you can see, this doesn't look right. If only there were a way that we could evaluate `sym(var_name)` and incorporate the result into the expression...
+As you can see, this doesn't look right. If only there were a way that we could evaluate `sym(var_name)` in the context where it was created...
 
 Also notice that we don't have to do anything special with the first argument to `filter()`, the data frame. We can replace this data frame with an equivalent data frame and get the same result; `filter()` is __referentially transparent__ for this argument.
 
@@ -636,3 +630,15 @@ ggplot(
 ) + geom_point()
 ```
 
+```{r, echo=TRUE}
+sliderInput("bins", "Number of bins:", min = 1, max = 50, value = 30)
+plotOutput("distPlot")
+```
+
+```{r, echo=TRUE, context="server"}
+output$distPlot <- renderPlot({
+  x <- faithful[, 2]  # Old Faithful Geyser data
+  bins <- seq(min(x), max(x), length.out = input$bins + 1)
+  hist(x, breaks = bins, col = 'darkgray', border = 'white')
+})
+```
