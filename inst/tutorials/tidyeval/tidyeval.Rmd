@@ -234,76 +234,127 @@ The tidyverse would be, as C3PO might say, "not entirely stable" if defining a v
 
 Perhaps we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the in the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
 
-In the next sections, we will use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind: this tutorial restricts itself to using these functions with data-sources that are local data-frames. I understand that these principles extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
+In the next sections, we will use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. 
 
 ## Using functions that use tidyeval
 
-One use for tidyeval is to help you write package functions. Another application is writing __shiny__ apps. 
+### Motivation
 
-In a shiny app, let's say you want your user to be able to upload a data-frame, filter on some condition, then make a scatterplot, letting your user specify your axes. Let's also say that you want to use the tidyverse. 
+The next couple of sections will talk about how we can use, and even write, functions that use tidyeval. As we make our way through these sections, I'd like to keep a motivating case in mind, writing __shiny__ apps. 
 
-Let's focus here the filtering step, where one challenge may be to compose a filtering condition without knowing what the data-frame's variables are. As you know, the `dplyr::filter()` function takes a series of expressions that it evaluates to `TRUE` or `FALSE` to determine which rows to return. Let's say that you have a shiny app where you have:
+In a shiny app, let's say you want your user to be able to specify a data frame, filter on some condition, then make a scatterplot, letting your user specify your axes. To keep the example a little simpler, let's say our goal is to be able to specify a data frame, then a filtering condition.
+
+When I write a shiny app, I want to be able to divide my code up into two "piles":
+
+1. Code that does stuff outside of shiny, that I can run interactively and test - you know, just [regular R code](https://tenor.com/view/rcode-typing-gif-11364811)
+2. Code to adapt the code from group (1.) into shiny - I want this code to be as "light" as possible
+
+I'll refer back to this motivating example as much as I can, as we make our way through the next couple of sections. 
+
+---
+
+In tidyeval, we compose expressions. In my (albeit limited) experience, I have come across three types of expressions; an expression can have more than one type:
+
+- **"valuey"** expressions: these evaluate to a set of values, e.g. `dplyr::filter()`.
+- **"selectly"** expressions: these evaluate to identify columns in a data frame, e.g. `dplyr::select()`.
+- **"namey"** expressions: these can be "valuey" expressions that have a name-assignment, e.g. `dplyr::mutate()`
+
+### "valuey" expressions
+
+As you saw earlier, the `dplyr::filter()` function takes a series of expressions that it evaluates to `TRUE` or `FALSE` to determine which rows to return. 
+
+Let's consider a version of our shiny app where we consider the `starwars` data frame, and we want to specify a single filtering condition, testing for equality. In this case, we will need
 
 - an input that specifies the variable for the filter - this will be a character string
 - an input that specifies the value - this will be a numeric value
 
-For the sake of simplicity, let's say that we will consider only a single filtering-condition, and that the condition will test equality. For the sake of even more simplicity, let's start out by specifying we will use the `starwars` data; we will filter on `birth_year`, we will vary only the value. 
+To simplify further, we will filter on `birth_year`, we will vary only the value. Let's get this working for "just regular R", by specifying a value for the input, and running the code that we would then put into part of a shiny app:
 
-```{r}
-value <- 19
+##### Your turn
 
-filter(starwars, birth_year == value)
+Run the following code block:
+
+```{r filter-input-value, exercise=TRUE}
+input_value <- 19
+
+filter(starwars, birth_year == input_value)
 ```
 
-So far so good - `filter()` looks for `birth_year` in the data and finds it, then looks for `value` in the data, does not find it, then finds `value` in the context.
+So far so good - `filter()` looks for `birth_year` in the data and finds it, then looks for `input_value` as a variable in the data, does not find it, then finds `input_value` as a variable in the context.
 
-You will need to use a little imagination because this is a contrived example. Let's imagine that we don't know that `starwars` does not have a column named `value`. We want to make this evaluation "airtight", we want to make sure that we use `value` from our context.
+---
 
-Let's look back at our string example:
+You will need to use a little imagination because this is a (very) contrived example. Let's imagine that we don't know that `starwars` does not have a column named `input_value`. We want to make this evaluation "airtight", we want to make sure that we use `input_value` from our context.
 
-```{r}
+##### Your turn
+
+Let's look back at our string example; run the following code block:
+
+```{r glue-input-value, exercise=TRUE}
 library("glue")
 
-value <- 19
+input_value <- 19
 
-glue("We want rows where the birth_year is {value}.")
+glue("We want rows where the birth_year is {input_value}.")
 ```
 
-Recall that we are composing a string by unquoting: `{name}` is replaced with value of `name`, using the context from which `glue()` is called. 
+Recall that we are composing a string by unquoting: `{input_value}` is replaced with *value* of `name`, using the context from which `glue()` is called. It takes the qutoed expression and evalutes it immediately.
 
-Instead of composing strings we need to compose expressions, so Tidyeval provides an __unquoting__ function.
+---
+
+Instead of composing strings, we want to compose expressions; the tidyeval framework provides an __unquoting__ function.
 The `!!` operator acts on expressions in tidyeval like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result into the expression.
 
 ##### Your turn
 
-1. Run the following code using the starting state: `value <- 19`, and `birth_year == value`. This should return observations for Luke and Leia.
+1. Run the following code using the starting state: `input_value <- 19`, and `birth_year == input_value`. This should return observations for Luke and Leia.
 2. Change these expressions to `birth_year <- 19` and `birth_year == birth_year`, then run the code again. What happens? Why?
 3. Change the second expression to `birth_year == !!birth_year`, then run the code again. Feel better?
 
 ```{r filter-uq-value, exercise=TRUE}
-value <- 19 
+input_value <- 19 
 
-filter(starwars, birth_year == value) 
+filter(starwars, birth_year == input_value) 
 ```
 
-The effect of the `!!` operator is to say, "Evaluate me now using the context where I was created!!". We can see this by using the `quo()` function as a debugging tool. Repeat the three steps above on the following code-block:
+The effect of the `!!` operator is to say, "Evaluate me now using my context!!". This can be an effective tool to bring clarity to our code. It's a way to specify, both to the computer and to anyone reading it, that this part of the expression will be evaluated using the context, *not* the data.
+
+---
+
+We can see take a peek at what will happen, "seeing" the function call from dplyr's perspective, using the `quo()` function as a debugging tool. 
+
+##### Your turn
+
+Here, we are doing just as above, but instead of looking at the result, have a look at the output of the `quo()` call:
+
+1. Run the following code using the starting state: `input_value <- 19`, and `birth_year == input_value`.
+2. Change these expressions to `birth_year <- 19` and `birth_year == birth_year`, then run the code again. 
+3. Change the second expression to `birth_year == !!birth_year`, then run the code again. 
 
 ```{r filter-uq-value-quo, exercise=TRUE}
-value <- 19 
+input_value <- 19 
 
 quo(
-  filter(starwars, birth_year == value)
+  filter(starwars, birth_year == input_value)
 )
 ```
 
-We see this word "quosure" again. I find it useful to think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions: `~filter(starwars, birth_year == 19)`, and we are given an indication of the materials: something like `0x7fca3107a468` (a memory location for an environment). For now, we can use the `quo()` function to verify that our instructions are what we expect.
+---
+
+(For extra credit, hit the "Start Over" button in the code block, change `birth_year == input_value` to `birth_year == !!input_value`, have a think about what you expect to see, then run the code.)
+
+We see this word "quosure" again. I find it useful to think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions: e.g. `^filter(starwars, birth_year == 19)`, and we are given an indication of the materials: something like `0x7fca3107a468` (a memory location for an environment). For now, we can use the `quo()` function to verify that our instructions are what we expect.
 
 -----
 
-Our next step is to specify the data frame and the column to filter. Recall that symbols can be used to compose expressions. Tidyeval provides a function to convert strings into symbols, `sym()`. 
+We have worked out how to specify a value unambiguously. Our next step is to specify the data frame and the column to filter. 
+
+Symbols can be used to compose expressions. The tidyeval framework provides a function to convert strings into symbols, `sym()`:
 
 ```{r}
-sym("foo")
+str(
+  sym("foo")  
+)
 ```
 
 We can use the `sym()` function to help build the left-hand-side of our expression.
@@ -312,69 +363,103 @@ We can use the `sym()` function to help build the left-hand-side of our expressi
 
 This code does not work... yet.
 
+1. Run the code-block as-is. Use the output of `quo()` to "see" what dplyr will see when it evaluates the expression.
+
+2. It looks like the expression `sym(input_name)` has not yet been evaluated. Apply an operator to `sym(input_name)` that will **evaluate it immediately**. 
+
+<details>
+ <summary>**Hint:**</summary>
+ <p>`!!`</p>
+</details>
+
+For extra credit, remove the `quo()` to make sure it still returns the data we expect.
+
 ```{r filter-sym, exercise=TRUE}
-df <- starwars
-var_name <- "birth_year"
-value <- 19
+data <- starwars
+
+input_name <- "birth_year"
+input_value <- 19
 
 quo(
-  filter(df, sym(var_name) == !!value)
+  filter(data, sym(input_name) == !!input_value)
 )
 ```
 
-As you can see, this doesn't look right. If only there were a way that we could evaluate `sym(var_name)` in the context where it was created...
-
-Also notice that we don't have to do anything special with the first argument to `filter()`, the data frame. We can replace this data frame with an equivalent data frame and get the same result; `filter()` is __referentially transparent__ for this argument.
-
-Finally, if you like, remove the `quo()` to make sure it still returns the data we expect.
+Notice that we don't have to do anything special with the first argument to `filter()`, the data frame. We can replace this data frame with an equivalent data frame and get the same result; `filter()` is __referentially transparent__ for this argument.
 
 -----
+
+There is one more thing we can do to make things airtight.
 
 ##### Your turn
 
-There is one more thing we can do to make things airtight. Consider this bit of mischief:
+Consider this bit of mischief:
+
+1. Run this code as is - what happens?
+2. Uncomment the expression `parsec <- 12`, rerun the code. What happens?
+
+How is what happens in (1.) different from what happens in (2.)? 
 
 ```{r filter-mischeif, exercise=TRUE}
-df <- starwars
-var_name <- "parsec"
-# parsec <- 12
-value <- 19
+data <- starwars
 
-filter(df, !!sym(var_name) == !!value)
+input_name <- "parsec"
+input_value <- 19
+
+# parsec <- 12
+
+filter(data, !!sym(input_name) == !!input_value)
 ```
 
-Run this as is, and we get an error-message that `parsec` is not found. Clearly, it is not a column in the data-frame, and it is not in our context. But what if it were in our context? Uncomment the `parsec <- 12` line and rerun. What happens? Why?
+In (1.) we get an error-message that `parsec` is not found. Clearly, it is not a column in the data-frame, and it is not in our context. 
 
------
+In (2.), the variable `parsec` *is* found in our context - dplyr evaluates `parsec` to `12`, there are no rows where `12 == 19`, so no rows are returned.
 
-Tidyeval has tool to make sure that we look in _only_ the data for a variable, a pronoun named `.data` to stand in for the data argument. You can use this to compose expressions that throw an error if variables are not found in the data.
+---
+
+The tidyeval framework has tool to make sure that we look in _only_ the data for a variable, a pronoun named `.data`. You can use this to compose expressions that throw an error if variables are not found in the data.
 
 Here are some examples:
 
-```{r error=TRUE}
+##### Your turn
+
+1. Run the code as-is to confirm that the `.data` pronoun works.
+2. Change the expression from `.data$birth_year` to `.data[["birth_year"]]`, rerun - just to make sure that we can use `[[` notation as well as `$` notation.
+3. Change the name of the data argument from `starwars` to `mtcars`, rerun to see what happens when a specified variable *does not* appear in the given data frame.
+
+```{r data-pronoun, exercise=TRUE}
 filter(starwars, .data$birth_year == 19)
-
-filter(mtcars, .data$birth_year == 19)
-
-filter(starwars, .data[["birth_year"]] == 19)
 ```
+
+---
 
 ##### Your turn
 
-Modify the left-hand-side of the filtering expression to use the `.data` pronoun with `var_name`. Make sure that we throw an error regardless of the `parsec <- 12` line being uncommented or not.
+Here, we will fortify the example from before, using the `.data` pronoun.
+
+1. Run the code as-is. It should work as expected.
+1. Change the left-side of filtering expression from `!!sym(input_name)` to `.data[[input_name]]`. Rerun the code, everything should work as you expect.
+1. Change `input_name <- "birth_year"` to `input_name <- "parsec"`, rerun the code. What happens?
+1. Uncomment the expression `parsec <- 12`, rerun the code. What happens now?
 
 ```{r filter-mischeif-managed, exercise=TRUE}
-df <- starwars
-var_name <- "parsec"
-# parsec <- 12
-value <- 19
+data <- starwars
 
-filter(df, !!sym(var_name) == !!value)
+input_name <- "birth_year"
+input_value <- 19
+
+# parsec <- 12
+
+filter(data, !!sym(input_name) == !!input_value)
 ```
 
-When we use tidyeval with dplyr functions, dplyr evaluates the expressions that you provide. It can be useful to keep in mind what the dplyr function is evaluating *to*. `filter()` evaluates its expressions to logical values - it wants `TRUE` or `FALSE`. Some dplyr functions do things a little differently, let's look at some of those differences.   
+By using the `.data` pronoun, we can make sure that the expression makes sense in the context of the data, and return an informative error messsage if it does not.
 
-### "selecty" functions
+---
+
+When we use tidyeval with dplyr functions, dplyr evaluates the expressions that you provide. It can be useful to keep in mind what the dplyr function is evaluating your expressions *to*. `filter()` evaluates its expressions to logical *values* - it wants `TRUE` or `FALSE`, so I think of `filter()` as wanting "valuey" expressions. Other dplyr functions may expect other types of expressions, let's look at some of those differences.   
+
+### "selecty" expressions
 
 There is a family of functions that use the __tidyselect__ package as their back-end; `dplyr::select()` is the most prominent. Other "selecty" functions include `tidyr::gather()` and `dplyr::pull()`. They all work the same way because they all need to identify a set of columns within an existing data source.
 
@@ -428,7 +513,7 @@ select(starwars, name, species : starships)
 
 Try some crazy ideas and see what works. For your craziest idea that works, explain why it works and why it might not be a good idea to use it in practice.
 
-### "namey" functions
+### "namey" expressions
 
 Some dplyr functions, in addition to evaluating expressions, assign column names. These include `mutate()`, `summarise()`, and `transmute()`.
 
