@@ -71,24 +71,16 @@ Most arguments to dplyr functions are not [__referentially transparent__](https:
 
 ##### Your turn
 
-Let's look again at our earlier example:
+Let's look again at our earlier example. In the code-block below:
 
-```{r}
-filter(starwars, species == "Droid")
-```
-
-Try the following substitutions and see what happens:
-
-```{r eval=FALSE}
-my_var <- species
-filter(starwars, my_var == "Droid")
-
-my_var <- "species"
-filter(starwars, my_var == "Droid")
-```
+1. Run the code as-is.
+1. Change the expression in the `filter()` to `my_var == "Droid"`
+1. Uncomment the expression `my_var <- species`, rerun. What happens?
+1. Change this expression to `my_var <- "species"`, rerun. What happens?
 
 ```{r starwars-my_var, exercise=TRUE}
-filter(starwars, species == "Droid")
+# my_var <- species
+filter(starwars, species == "Droid")  
 ```
 
 As you see, neither of these substitutions works - so it is not immediately obvious how to call dplyr functions without hard-coding everything.
@@ -141,20 +133,26 @@ We can demonstrate tidyeval's central idea using strings. Let's say that we want
 
 ##### Your turn
 
-In the exercise below, you will see that our first attempt is clearly doomed. Comment and un-comment the following lines to see some approaches we can use to compose the string that we expect. Maybe try some compositions of your own...
+The goal here is to put a name into a string, then print it.
 
-In your own words, why does the first attempt fail, while the other two succeed?
+In the exercise below:
+
+1. Run the code in the block below (you likely suspect that "approach #1" is doomed).
+1. Uncomment the code under "approach #2", rerun.
+1. Uncomment the code under "approach #3", rerun.
 
 ```{r warm-up, exercise=TRUE}
 name <- "not Hadley"
 
+## approach #1
+## -----------
 "How do you do, name?"
 
-## approach #1
+## approach #2
 ## -----------
 # paste0("How do you do, ", name, "?")
 
-## approach #2
+## approach #3
 ## -----------
 # library("glue")
 # glue("How do you do, {name}?")
@@ -212,10 +210,17 @@ If you are already a little familiar with tidyeval, you have heard about __quosu
 
 One of the mantras of the tidyverse is "data first!" 
 
-Tidyverse functions are designed so that a data-frame is the first argument wherever feasible; this makes it easy to use the pipe operator. For example, let's find the youngest character(s) from each species.
+Tidyverse functions are designed so that a data-frame is the first argument wherever feasible; this makes it easy to use the pipe operator. 
 
-```{r}
-birth_year <- c(15, 19) # what if filter() did not look at data first?
+##### Your turn
+
+Let's find the youngest character(s) from each species.
+
+1. Run the code the code in the block below; confirm that we get the result we expect.
+2. Uncomment the expression `birth_year <- c(15, 19)`, rerun. What happens?
+
+```{r birth-year, exercise=TRUE}
+# birth_year <- c(15, 19) 
 
 starwars %>%
   select(name, species, birth_year) %>%
@@ -223,7 +228,11 @@ starwars %>%
   filter(birth_year == min(birth_year, na.rm = TRUE)) 
 ```
 
-As you can see, we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
+The tidyverse would be, as C3PO might say, "not entirely stable" if defining a variable with the same name as a data-frame column changed the result. 
+
+----
+
+Perhaps we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the in the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
 
 In the next sections, we will use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. One thing to keep in mind: this tutorial restricts itself to using these functions with data-sources that are local data-frames. I understand that these principles extend to using other data sources such as remote databases, but I am not your best guide to these other situations.
 
