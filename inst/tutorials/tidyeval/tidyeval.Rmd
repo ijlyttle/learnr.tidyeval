@@ -461,24 +461,24 @@ When we use tidyeval with dplyr functions, dplyr evaluates the expressions that 
 
 ### "selecty" expressions
 
-There is a family of functions that use the __tidyselect__ package as their back-end; `dplyr::select()` is the most prominent. Other "selecty" functions include `tidyr::gather()` and `dplyr::pull()`. They all work the same way because they all need to identify a set of columns within an existing data source.
+There is a family of functions that use the [__tidyselect__](https://CRAN.R-project.org/package=tidyselect) package as their back-end; `dplyr::select()` is the most prominent. Other functions that use "selecty" expressions include `tidyr::gather()` and `dplyr::pull()`. They all work the same way because they all need to identify a set of columns within an existing data source.
 
-This excellent [tidyr article](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/) dives into the theory and design choices. There are two big points here.
+This excellent [tidyr article](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/) dives into the theory and design choices. There are two big points here:
 
-1. Selecty functions evaluate its expressions to integers that indicate column-positions in the data source.
+1. Selecty functions evaluate its expressions into integers that indicate column-positions in the data source.
 
-2. It is best-practice to provide expressions that make sense only in the data, not in the surrounding context.
+2. It is best-practice to provide expressions that make sense *only* in the data, not in the surrounding context.
 
 Let's look at some examples of these principles in action. The usual way to call a select function is just to use the bare column-names, which we now know as symbols. 
 
-```{r}
+##### Your turn
+
+1. Run the code as-is, noting the columns in the returned data frame.
+2. Comment out the first line of code, uncomment the second line, rerun the code block. Confirm that you get the same result. 
+
+```{r selecty-intro, exercise=TRUE}
 select(starwars, name, species : starships)
-```
-
-We get an identical result if we specify the column-positions explicitly.
-
-```{r eval=FALSE}
-select(starwars, 1, 10 : 13)
+# select(starwars, 1, 10 : 13)
 ```
 
 If we want to insist that we look only in the data for the name (not a bad idea), we can use the `.data` pronoun:
@@ -493,29 +493,23 @@ Here's where things can get potentially difficult. Let's say that you want to se
 select(starwars, .data$name, .data$species : ncol(starwars))
 ```
 
-But the expression `ncol(starwars)` refers to the context where `starwars` is found. Our best-practice is to refer only to the data. We now have two references to `starwars` in the function call; we would prefer to have only one.
+But the expression `ncol(starwars)` refers to the context where `starwars` is found. Our best-practice with selecty functions is to refer *only* to the data. 
 
 The __tidyselect__ package gives us a solution, a helper function called `last_col()` (if functions had hex-stickers, I imagine this hex-sticker would feature a pint glass, but I digress).
 
-```{r}
-library("tidyselect")
-select(starwars, .data$name, .data$species : last_col())
-```
-
 ##### Your turn
 
-Try out some of the techniques featured above to convince yourself that they work.
+1. Run the code below, to set your expectations.
+2. Replace `.data$starships` with `last_col()`. Rerun the code block to confirm you get the same result.
 
 ```{r selecty, exercise=TRUE}
 library("tidyselect")
-select(starwars, name, species : starships)
+select(starwars, .data$name, .data$species : .data$starships)
 ```
-
-Try some crazy ideas and see what works. For your craziest idea that works, explain why it works and why it might not be a good idea to use it in practice.
 
 ### "namey" expressions
 
-Some dplyr functions, in addition to evaluating expressions, assign column names. These include `mutate()`, `summarise()`, and `transmute()`.
+Some dplyr functions, in addition to evaluating "valuey" expressions, assign column names. These include `mutate()`, `summarise()`, `transmute()`, and, optionally, `group_by()`.
 
 For an example, let's find the minimum `birth_year` for each species.
 
@@ -525,47 +519,55 @@ starwars %>%
   summarise(birth_year_min = min(birth_year, na.rm = TRUE)) 
 ```
 
-Now I want to parameterise this, in case I want to do the same thing with height. (You are likely suspecting that we should really be making a function to do this - which we will in the next section of this tutorial.) 
-
-Here's one way to do it:
+Let's say we want to parameterise this, in case we want to do the same thing with `height`. Here's one way to do it:
 
 ```{r}
-var_to_min <- "birth_year"
+input_name <- "birth_year"
 
-var_min <- paste0(var_to_min, "_min")
+name_new <- glue("{input_name}_min")
 
 starwars %>%
   group_by(species) %>%
-  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) 
+  summarise(!!sym(name_new) := min(!!sym(input_name), na.rm = TRUE)) 
 ```
 
-The first step here is to create a new variable-name by appending `"_min"` to the variable-name of interest. The second step is to adapt the `summarise()` expression. Note that it has both a left side (new name) and a right side (value). The good news is that we can use our unquoting tools on both sides. However, the `=` operator does not support unquoting on the left-side, so we use the `:=` operator from the __rlang__ package - designed just for this purpose. 
+You can see there are a few things going on here:
 
-The use of the `:=` operator is the thing that we need to keep in mind when using "namey" functions. 
+1. We create a new variable-name by appending `"_min"` to `input_name`. 
 
-One other point, because the left-side is going to end up as a name, you can unquote a symbol, `!!sym(var_min)`, or a string, `!!var_min`.
+2. We adapt the `summarise()` expression:
+
+ - Note that it has both a left side (new name) and a right side (value). 
+ - We can use our unquoting tools on both sides. 
+ - However, the `=` operator does not support unquoting on the left-side, so we use the `:=` operator from the __rlang__ package - designed just for this purpose. 
+
+When composing "namey" expressions, keep in mind that we have to use `:=` operator if we evaluate anything on the left side (the name).
+
+One other point, because the left side is going to end up as a name, you can unquote a symbol, `!!sym(name_new)`, or a string, `!!name_new`.
 
 ##### Your turn
 
-Evaluate this solution for yourself:
+Evaluate this solution for yourself. 
+
+1. Run the original code, as-is.
+2. Adapt the solution shown above, using `input_name`, `name_new`, etc. Rerun the code to make sure it works for you.
+3. Try using `!!name_new` on the left side of the `:=` operator. Rerun the code.
 
 ```{r namey-summarise, exercise=TRUE}
-var_to_min <- "birth_year"
-
-var_min <- paste0(var_to_min, "_min")
-
 starwars %>%
   group_by(species) %>%
-  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) 
+  summarise(birth_year_min = min(birth_year, na.rm = TRUE)) 
 ```
 
-Experiment with unquoting the string rather than the symbol, try using different variable names, wrap the call in `quo()` to see the instructions. Have fun.
+For extra credit, wrap the call in `quo()` to see the instructions. For the purpose of seeing the instructions, you may wish to do something like `name_new <- glue("{input_name}_min") %>% as.character()`.
+
+Have fun!
 
 ## Writing functions that use tidyeval
 
 I imagine that there may have been a few times in the previous section when you thought to yourself, "why don't you write a function?!?" 
 
-Yes - we should be writing functions; tidyeval's superpower is that it allows us to write functions that we can be confident will work _how we intend_, after we release them into the world. For this tutorial, I thought to try to introduce one tidyeval component at a time, so I  saved functions for later. You, dear reader, may judge me on that.
+Yes - we should be writing functions; tidyeval's superpower is that it allows us to write functions that we can be confident will work _how we intend_, after we release them into the world. For this tutorial, I thought to try to introduce one tidyeval component at a time, so I saved functions for later. 
 
 Now that we're here, let's look at writing functions.
 
