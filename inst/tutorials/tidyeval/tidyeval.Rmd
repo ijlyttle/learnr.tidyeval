@@ -598,7 +598,7 @@ filter_name_value(starwars, "birth_year", 19)
 
 ### Quosures
 
-The function above works like we expect, but it does not yet "look-and-feel" more like dplyr. For example, we would like to use a bare symbol, rather than a string to identify the variable.
+The function above works like we expect, but it does not yet "look-and-feel" like dplyr. For example, we would like to use a bare symbol, rather than a string to identify the variable.
 
 ##### Your turn
 
@@ -615,7 +615,25 @@ filter_quo_value <- function(data, input_quo, input_value) {
 filter_quo_value(starwars, quo(birth_year), 19)
 ```
 
-Go over again symbols, expressions, and quosures.
+This might be a good time to discuss symbols, expressions, and quosures a little more:
+
+- A **symbol** is an atomic component of an **expression**; a symbol represents an object.
+
+- An **expression** is a set of instructions to be evaluated.
+
+- A **quosure** is an **expression** that carries with it the environment (the context) where it was created.
+
+Perhaps it can be useful to think of an expression as a set of instructions. In this way, a symbol can be thought of as a word in the instructions. Similarly, a quosure is an expression (set of instructions) that carries with it the context in which is was created (think of the context as a set of materials). By capturing the environment where it was created, we can be sure that the quosure will be evaluated using the "correct" values. 
+
+Let's step through what's happenning in the example above:
+
+```{r filter-quo-function-2, exercise=TRUE}
+filter_quo_value <- function(data, input_quo, input_value) {
+  dplyr::filter(.data, !!var_quo == !!value)  
+}
+
+filter_quo_value(starwars, quo(birth_year), 19)
+```
 
 Consider the function `filter_quo_value()` in the exercise below. The operative expression is
 

@@ -20,5 +20,5 @@ filtered copy of `.data`
 filter on name and value
 }
 \examples{
-ex_filter_name_value(mtcars, "cyl", 6)
+\dontrun{ex_filter_name_value(mtcars, "cyl", 6)}
 }
