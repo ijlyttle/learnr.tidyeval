@@ -565,45 +565,57 @@ Have fun!
 
 ## Writing functions that use tidyeval
 
-I imagine that there may have been a few times in the previous section when you thought to yourself, "why don't you write a function?!?" 
+In the previous section, we learned how to compose expressions for use with functions that use tidyeval; in this section, we try to complete that picture. Here, we will see how to write functions that use tidyeval.
 
-Yes - we should be writing functions; tidyeval's superpower is that it allows us to write functions that we can be confident will work _how we intend_, after we release them into the world. For this tutorial, I thought to try to introduce one tidyeval component at a time, so I saved functions for later. 
-
-Now that we're here, let's look at writing functions.
+The overall goal is to write code, and to let your functions' users write code, that makes it clear what is intended to happen; that makes it unambiguous how an expression is to be evaluated.
 
 Recall our example where we filtered the `starwars` dataset based on a string and a numeric value.
 
 ```{r filter-str-ex, eval=FALSE}
-df <- starwars
-var_name <- "birth_date"
-value <- 19
+data <- starwars
+input_name <- "birth_date"
+input_value <- 19
 
-filter(starwars, !!sym(var_name) == !!value)
+filter(data, !!sym(input_name) == !!input_value)
 ```
 
-The rest of these examples are in "interactive" mode so that you can experiment with them. Our first step is to wrap this code in a function.
+Our first attempt at a function will wrap our existing functionality; it will take a data frame, a string that describes a variable in the data frame, and a value.  
+
+#### Your turn
+
+Here's our function:
+
+1. Run the code to make confirm it works as we expect.
+2. Run the code using different arguments, e.g. `filter_name_value(mtcars, "cyl", 6)`
 
 ```{r filter-str-function, exercise=TRUE}
-filter_name_value <- function(.data, var_name, value) {
-  dplyr::filter(.data, !!sym(var_name) == !!value)  
+filter_name_value <- function(data, input_name, input_value) {
+  dplyr::filter(data, !!sym(input_name) == !!input_value)  
 }
 
 filter_name_value(starwars, "birth_year", 19)
 ```
 
-Try using this function to filter other data frames, for example, `filter_name_value(mtcars, "cyl", 6)`.
-
-### Package considerations
-
-As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
-
-The [__usethis__](https://github.com/r-lib/usethis) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. I used the `use_tidyeval()` function to generate `utils-tidy-eval.R`, for example.
-
-To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). Try it out, i.e. `ex_filter_name_value(mtcars, "cyl", 6)`.
-
 ### Quosures
 
-We have written a function that seems to work for a variety of cases, let's work to make this code look-and-feel a little more like "dplyr". We would like to use a bare symbol, rather than a string.
+The function above works like we expect, but it does not yet "look-and-feel" more like dplyr. For example, we would like to use a bare symbol, rather than a string to identify the variable.
+
+##### Your turn
+
+We have changed the function so that it takes a *quosure* instead of a *string*. Try out the following, then we will discuss what is going on.
+
+1. Run the code to make confirm it works as we expect.
+2. Run the code using different arguments, e.g. `filter_name_value(mtcars, quo(cyl), 6)`
+
+```{r filter-quo-function, exercise=TRUE}
+filter_quo_value <- function(data, input_quo, input_value) {
+  dplyr::filter(.data, !!var_quo == !!value)  
+}
+
+filter_quo_value(starwars, quo(birth_year), 19)
+```
+
+Go over again symbols, expressions, and quosures.
 
 Consider the function `filter_quo_value()` in the exercise below. The operative expression is
 
@@ -619,13 +631,7 @@ To use our function, we wrap the bare name of our column in `quo()`, in this exa
 
 Like the example above, experiment with this function.
 
-```{r filter-quo-function, exercise=TRUE}
-filter_quo_value <- function(.data, var_quo, value) {
-  dplyr::filter(.data, !!var_quo == !!value)  
-}
 
-filter_quo_value(starwars, quo(birth_year), 19)
-```
 
 We are closer, but we still have this `quo()` hanging around; it's not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us. This is the job of the `enquo()` function.
 
@@ -699,6 +705,14 @@ summarise_more_min <- function(.data, var_min, ...) {
 
 summarise_more_min(starwars, birth_year, species, hair_color)
 ```
+
+### Package considerations
+
+As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
+
+The [__usethis__](https://github.com/r-lib/usethis) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. I used the `use_tidyeval()` function to generate `utils-tidy-eval.R`, for example.
+
+To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). Try it out, i.e. `ex_filter_name_value(mtcars, "cyl", 6)`.
 
 ## More stuff
 

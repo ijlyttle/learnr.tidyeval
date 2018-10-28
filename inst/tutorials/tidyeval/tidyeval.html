@@ -579,48 +579,56 @@ starwars %&gt;%
 </div>
 <div id="section-writing-functions-that-use-tidyeval" class="section level2">
 <h2>Writing functions that use tidyeval</h2>
-<p>I imagine that there may have been a few times in the previous section when you thought to yourself, “why don’t you write a function?!?”</p>
-<p>Yes - we should be writing functions; tidyeval’s superpower is that it allows us to write functions that we can be confident will work <em>how we intend</em>, after we release them into the world. For this tutorial, I thought to try to introduce one tidyeval component at a time, so I saved functions for later.</p>
-<p>Now that we’re here, let’s look at writing functions.</p>
+<p>In the previous section, we learned how to compose expressions for use with functions that use tidyeval; in this section, we try to complete that picture. Here, we will see how to write functions that use tidyeval.</p>
+<p>The overall goal is to write code, and to let your functions’ users write code, that makes it clear what is intended to happen; that makes it unambiguous how an expression is to be evaluated.</p>
 <p>Recall our example where we filtered the <code>starwars</code> dataset based on a string and a numeric value.</p>
-<pre class="r"><code>df &lt;- starwars
-var_name &lt;- &quot;birth_date&quot;
-value &lt;- 19
+<pre class="r"><code>data &lt;- starwars
+input_name &lt;- &quot;birth_date&quot;
+input_value &lt;- 19
 
-filter(starwars, !!sym(var_name) == !!value)</code></pre>
-<p>The rest of these examples are in “interactive” mode so that you can experiment with them. Our first step is to wrap this code in a function.</p>
+filter(data, !!sym(input_name) == !!input_value)</code></pre>
+<p>Our first attempt at a function will wrap our existing functionality; it will take a data frame, a string that describes a variable in the data frame, and a value.</p>
+<div id="section-your-turn-15" class="section level4">
+<h4>Your turn</h4>
+<p>Here’s our function:</p>
+<ol style="list-style-type: decimal">
+<li>Run the code to make confirm it works as we expect.</li>
+<li>Run the code using different arguments, e.g. <code>filter_name_value(mtcars, &quot;cyl&quot;, 6)</code></li>
+</ol>
 <div class="tutorial-exercise" data-label="filter-str-function" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>filter_name_value &lt;- function(.data, var_name, value) {
-  dplyr::filter(.data, !!sym(var_name) == !!value)  
+<pre class="text"><code>filter_name_value &lt;- function(data, input_name, input_value) {
+  dplyr::filter(data, !!sym(input_name) == !!input_value)  
 }
 
 filter_name_value(starwars, &quot;birth_year&quot;, 19)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
-<p>Try using this function to filter other data frames, for example, <code>filter_name_value(mtcars, &quot;cyl&quot;, 6)</code>.</p>
-<div id="section-package-considerations" class="section level3">
-<h3>Package considerations</h3>
-<p>As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. <code>dplyr::filter()</code> rather than <code>filter()</code>. For commonly-used fundamental functions, like <code>quo()</code> and <code>sym()</code>, from <strong>rlang</strong>, we can import these into the package itself, avoiding the need prepend with <code>rlang::</code>. For example, see <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R"><code>utils-tidy-eval.R</code></a> in the package’s R directory.</p>
-<p>The <a href="https://github.com/r-lib/usethis"><strong>usethis</strong></a> package makes it very easy for you to use tidyeval functions in your package-functions, <em>and</em> pass R CMD CHECK. I used the <code>use_tidyeval()</code> function to generate <code>utils-tidy-eval.R</code>, for example.</p>
-<p>To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function <code>ex_filter_name_value()</code> in this package, you can inspect it <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R">here</a>. Try it out, i.e. <code>ex_filter_name_value(mtcars, &quot;cyl&quot;, 6)</code>.</p>
 </div>
 <div id="section-quosures" class="section level3">
 <h3>Quosures</h3>
-<p>We have written a function that seems to work for a variety of cases, let’s work to make this code look-and-feel a little more like “dplyr”. We would like to use a bare symbol, rather than a string.</p>
-<p>Consider the function <code>filter_quo_value()</code> in the exercise below. The operative expression is</p>
-<pre class="r"><code>!!var_quo == !!value</code></pre>
-<p>On the right-hand side, following the <code>!!</code>, we want something that evaluates to a value. On the left-hand side, following the <code>!!</code>, we want something that evaluates to an expression (a set of instructions).</p>
-<p>We have a tool for encapsulating an expression: <code>quo()</code>, which builds a quosure. In this case, we are not using the context (set of materials) part of the quosure, only the expression.</p>
-<p>To use our function, we wrap the bare name of our column in <code>quo()</code>, in this example: <code>quo(birth_year)</code>.</p>
-<p>Like the example above, experiment with this function.</p>
+<p>The function above works like we expect, but it does not yet “look-and-feel” more like dplyr. For example, we would like to use a bare symbol, rather than a string to identify the variable.</p>
+<div id="section-your-turn-16" class="section level5">
+<h5>Your turn</h5>
+<p>We have changed the function so that it takes a <em>quosure</em> instead of a <em>string</em>. Try out the following, then we will discuss what is going on.</p>
+<ol style="list-style-type: decimal">
+<li>Run the code to make confirm it works as we expect.</li>
+<li>Run the code using different arguments, e.g. <code>filter_name_value(mtcars, quo(cyl), 6)</code></li>
+</ol>
 <div class="tutorial-exercise" data-label="filter-quo-function" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>filter_quo_value &lt;- function(.data, var_quo, value) {
+<pre class="text"><code>filter_quo_value &lt;- function(data, input_quo, input_value) {
   dplyr::filter(.data, !!var_quo == !!value)  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
+<p>Go over again symbols, expressions, and quosures.</p>
+<p>Consider the function <code>filter_quo_value()</code> in the exercise below. The operative expression is</p>
+<pre class="r"><code>!!var_quo == !!value</code></pre>
+<p>On the right-hand side, following the <code>!!</code>, we want something that evaluates to a value. On the left-hand side, following the <code>!!</code>, we want something that evaluates to an expression (a set of instructions).</p>
+<p>We have a tool for encapsulating an expression: <code>quo()</code>, which builds a quosure. In this case, we are not using the context (set of materials) part of the quosure, only the expression.</p>
+<p>To use our function, we wrap the bare name of our column in <code>quo()</code>, in this example: <code>quo(birth_year)</code>.</p>
+<p>Like the example above, experiment with this function.</p>
 <p>We are closer, but we still have this <code>quo()</code> hanging around; it’s not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us. This is the job of the <code>enquo()</code> function.</p>
 <p>We use <code>enquo()</code> in our function to capture the argument as a quosure. Try it out:</p>
 <div class="tutorial-exercise" data-label="filter-sym-value" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
@@ -635,6 +643,7 @@ filter_sym_value(starwars, birth_year, 19)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
 <p>Bonus task: amend the exercise above to make a call to <code>filter_sym_value()</code> using a string, <code>&quot;birth_year&quot;</code>. Do not change the function, change the call. Look earlier in this tutorial for a hint.</p>
+</div>
 </div>
 <div id="section-renaming-variables" class="section level3">
 <h3>Renaming variables</h3>
@@ -686,6 +695,12 @@ summarise_min(starwars, birth_year, species)</code></pre>
 summarise_more_min(starwars, birth_year, species, hair_color)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
+</div>
+<div id="section-package-considerations" class="section level3">
+<h3>Package considerations</h3>
+<p>As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. <code>dplyr::filter()</code> rather than <code>filter()</code>. For commonly-used fundamental functions, like <code>quo()</code> and <code>sym()</code>, from <strong>rlang</strong>, we can import these into the package itself, avoiding the need prepend with <code>rlang::</code>. For example, see <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R"><code>utils-tidy-eval.R</code></a> in the package’s R directory.</p>
+<p>The <a href="https://github.com/r-lib/usethis"><strong>usethis</strong></a> package makes it very easy for you to use tidyeval functions in your package-functions, <em>and</em> pass R CMD CHECK. I used the <code>use_tidyeval()</code> function to generate <code>utils-tidy-eval.R</code>, for example.</p>
+<p>To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function <code>ex_filter_name_value()</code> in this package, you can inspect it <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R">here</a>. Try it out, i.e. <code>ex_filter_name_value(mtcars, &quot;cyl&quot;, 6)</code>.</p>
 </div>
 </div>
 <div id="section-more-stuff" class="section level2">

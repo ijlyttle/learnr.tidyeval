@@ -15,7 +15,6 @@ knitr::opts_chunk$set(
 # learnr.tidyeval
 
 [![Travis-CI Build Status](https://travis-ci.org/ijlyttle/learnr.tidyeval.svg?branch=master)](https://travis-ci.org/ijlyttle/learnr.tidyeval)
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/learnr.tidyeval)](https://cran.r-project.org/package=learnr.tidyeval)
 
 The goal of learnr.tidyeval is to support an interactive tutorial for tidyeval.
 
