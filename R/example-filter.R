@@ -6,7 +6,7 @@
 #'
 #' @return filtered copy of `.data`
 #' @examples
-#' ex_filter_name_value(mtcars, "cyl", 6)
+#' \dontrun{ex_filter_name_value(mtcars, "cyl", 6)}
 #' @export
 #'
 ex_filter_name_value <- function(.data, var_name, value) {
