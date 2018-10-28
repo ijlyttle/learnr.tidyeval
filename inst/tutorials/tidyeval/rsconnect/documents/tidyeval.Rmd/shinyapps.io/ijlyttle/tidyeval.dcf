@@ -5,8 +5,8 @@ account: ijlyttle
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 229937
-bundleId: 1663387
+bundleId: 1666853
 url: https://ijlyttle.shinyapps.io/tidyeval/
-when: 1540501743.01525
+when: 1540685962.43579
 asMultiple: FALSE
 asStatic: FALSE
