@@ -609,7 +609,7 @@ We have changed the function so that it takes a *quosure* instead of a *string*.
 
 ```{r filter-quo-function, exercise=TRUE}
 filter_quo_value <- function(data, input_quo, input_value) {
-  dplyr::filter(.data, !!var_quo == !!value)  
+  dplyr::filter(data, !!input_quo == !!input_value)  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)
@@ -623,79 +623,87 @@ This might be a good time to discuss symbols, expressions, and quosures a little
 
 - A **quosure** is an **expression** that carries with it the environment (the context) where it was created.
 
-Perhaps it can be useful to think of an expression as a set of instructions. In this way, a symbol can be thought of as a word in the instructions. Similarly, a quosure is an expression (set of instructions) that carries with it the context in which is was created (think of the context as a set of materials). By capturing the environment where it was created, we can be sure that the quosure will be evaluated using the "correct" values. 
+Perhaps it can be useful to think of an expression as a set of instructions. In this way, a symbol can be thought of as a word within a set of instructions. Similarly, a quosure is an expression (set of instructions) that carries with it the context in which is was created (think of the context as a set of materials). By capturing the environment where it was created, we can be sure that the quosure will be evaluated using the "correct" values. 
+
+When we send `quo(birth_year)` to the function, we are *not* sending the value of `birth_year`. Instead, we are "quoting" `birth_year`, preserving it as an unevaluated expression, in this case, a symbol. 
+
+##### Your turn
 
 Let's step through what's happenning in the example above:
 
+1. Run the code as-is, noting we have an emptyish print statement inside the function. We will quote-print things so we can "see" what `dplyr::filter()` "sees".
+2. Put the expression `input_quo` inside the `print(quo())`. Rerun. Why can't we use `input_quo` as is in the `dplyr::filter()` function? 
+3. Put the expression `!!input_quo` inside the `print(quo())`. Rerun. How is this more-useful to the `dplyr::filter()` function? 
+
 ```{r filter-quo-function-2, exercise=TRUE}
 filter_quo_value <- function(data, input_quo, input_value) {
-  dplyr::filter(.data, !!var_quo == !!value)  
+  print(quo())
+  dplyr::filter(data, !!input_quo == !!input_value)  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)
 ```
 
-Consider the function `filter_quo_value()` in the exercise below. The operative expression is
 
-```r
-!!var_quo == !!value
-```
+For `dplyr::filter()` to be able to access the contents of `input_quo`, we have to unquote it (using !!). This exposes the expression inside, in this case the symbol `birth_year`. The `filter()` function recognizes the symbol `birth_year` as belonging to the data frame, then evaluates it in the context of the data frame.
 
-On the right-hand side, following the `!!`, we want something that evaluates to a value. On the left-hand side, following the `!!`, we want something that evaluates to an expression (a set of instructions). 
+---
 
-We have a tool for encapsulating an expression: `quo()`, which builds a quosure. In this case, we are not using the context (set of materials) part of the quosure, only the expression. 
+We are closer to the dplyr "look-and-feel", but we still have this `quo()` hanging around; it's not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us (like dplyr does). This is the job of the `enquo()` function.
 
-To use our function, we wrap the bare name of our column in `quo()`, in this example: `quo(birth_year)`.
+We use `enquo()` in our function to capture the argument as a quosure. 
 
-Like the example above, experiment with this function.
+##### Your turn
 
+Here, we have a new function that uses the `enquo()` to capture the argument and put it into a quosure.
 
-
-We are closer, but we still have this `quo()` hanging around; it's not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us. This is the job of the `enquo()` function.
-
-We use `enquo()` in our function to capture the argument as a quosure. Try it out:
+1. Run the code as-is to convince yourself "it works".
+2. Uncomment the expression `input_name <- "birth_year"`. Change the function call (not the function itself) so that it uses `input_name`. If you like, uncomment and use `print(quo())` to help you "see" what the function "sees".
 
 ```{r filter-sym-value, exercise=TRUE}
-filter_sym_value <- function(.data, sym, value) {
+filter_sym_value <- function(data, input_sym, input_value) {
   
-  sym <- enquo(sym)
+  input_sym <- enquo(input_sym)
   
-  dplyr::filter(.data, !!sym == !!value) 
+  dplyr::filter(data, !!input_sym == !!input_value) 
 }
+
+# input_name <- "birth_year"
+# print(quo())
 
 filter_sym_value(starwars, birth_year, 19)
 ```
-
-Bonus task: amend the exercise above to make a call to `filter_sym_value()` using a string, `"birth_year"`. Do not change the function, change the call. Look earlier in this tutorial for a hint.
 
 ### Renaming variables
 
 Recall this exercise:
 
 ```{r eval=FALSE}
-var_to_min <- "birth_year"
+input_name <- "birth_year"
 
-var_min <- paste0(var_to_min, "_min")
+name_new <- glue("{input_name}_min")
 
 starwars %>%
   group_by(species) %>%
-  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) 
+  summarise(!!sym(name_new) := min(!!sym(input_name), na.rm = TRUE)) 
 ```
 
-Let's rewrite this as a function where we want to specify the variable that we minimise and the variable that use for grouping.
+##### Your turn
 
-Talk about `quo_name()`, remind about `:=`.
+Here, this is rewritten as function where we specify the variable that we minimise, `var_min`, and the variable that use for grouping, `var_group`.
+
+1. Run the code to confirm that this works.
 
 ```{r renaming-variables, exercise=TRUE}
-summarise_min <- function(.data, var_min, var_group) {
+summarise_min <- function(data, var_min, var_group) {
   
   var_group <- enquo(var_group)
   var_min <- enquo(var_min)
   
   name_var_min <- quo_name(var_min)
-  name_var_new <- paste0(name_var_min, "_min")
+  name_var_new <- glue::glue("{name_var_min}_min")
   
-  .data %>%
+  data %>%
     dplyr::group_by(!!var_group) %>%
     dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
@@ -703,20 +711,32 @@ summarise_min <- function(.data, var_min, var_group) {
 summarise_min(starwars, birth_year, species)
 ```
 
+There are a couple of things to note here: 
+
+- We have introduced a new function from rlang, `quo_name()`. Its name suggests what it does, converts a quosure into a string. In our case, we use this to create our new variable-name.
+
+- When we use `summarise()` to create our new variable in the data frame, we have to use `:=` because we have a "namey" expression where we are using unquoting (`!!`) to create the name.
+
 ### Multiple variables
 
-Let's say we want to specify more than one grouping variable. Talk about using `quos()` to capture the `...` into a list of quosures. Talk about using `!!!` to unquote a list of quosures.
+Let's say we want to specify more than one grouping variable. In our function signature, we would have a `...` set of arguments to represent multiple expressions. The tidyeval framework has some tools for this situation.
+
+##### Your turn
+
+Here, this is rewritten as function where we specify the variable that we minimise, `var_min`, and the variables that use for grouping, `...`.
+
+1. Run the code to confirm that this works.
 
 ```{r multiple-variables, exercise=TRUE}
-summarise_more_min <- function(.data, var_min, ...) {
+summarise_more_min <- function(data, var_min, ...) {
   
-  var_group <- quos(...)
+  var_group <- enquos(...)
   var_min <- enquo(var_min)
   
   name_var_min <- rlang::quo_name(var_min)
   name_var_new <- paste0(name_var_min, "_min")
   
-  .data %>%
+  data %>%
     dplyr::group_by(!!!var_group) %>%
     dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
@@ -724,23 +744,28 @@ summarise_more_min <- function(.data, var_min, ...) {
 summarise_more_min(starwars, birth_year, species, hair_color)
 ```
 
+To capture a list of `...` expressions as quosures, we use the `enquos()` function, rather than the `enquo()` function. To unquote our list of quosures, we use `!!!`, rather than `!!`. As Hadley and Lionel [point out](https://dplyr.tidyverse.org/articles/programming.html#capturing-multiple-variables), think of `!!!` as containing the three dots of `...`.
+
 ### Package considerations
 
-As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in the package's R directory.  
+As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in this package's R directory.  
 
-The [__usethis__](https://github.com/r-lib/usethis) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. I used the `use_tidyeval()` function to generate `utils-tidy-eval.R`, for example.
+The [__usethis__](http://usethis.r-lib.org) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. For this packagee, I used the `use_tidyeval()` function to generate [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R). As you can see, it imports and re-exports a lot of rlang functions - only a few of which we have been able to cover here.
 
-To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). Try it out, i.e. `ex_filter_name_value(mtcars, "cyl", 6)`.
+To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). 
 
 ## More stuff
 
-Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through the three main references by the tidyeval architects, you can use these to deepen your knowledge ,and introduce yourself to the supporting theory:
+Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through these references by the tidyeval architects, you can use these to deepen your knowledge ,and introduce yourself to the supporting theory:
 
 - [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
 - [Tidy evaluation](http://rlang.tidyverse.org/articles/tidy-evaluation.html)
 - [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
+- [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
 
-There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval. Mara Averick has the canonical [tidyeval resource roundup](https://maraaverick.rbind.io/2017/08/tidyeval-resource-roundup/), so the best thing I can do here is to point you that-a-way.
+There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval; fortunately "tidyeval" is a very Google-firendly term.
+
+---
 
 ```{r ggplot2, exercise=TRUE}
 library("rlang")

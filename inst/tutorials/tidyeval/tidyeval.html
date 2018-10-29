@@ -616,7 +616,7 @@ filter_name_value(starwars, &quot;birth_year&quot;, 19)</code></pre>
 </ol>
 <div class="tutorial-exercise" data-label="filter-quo-function" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>filter_quo_value &lt;- function(data, input_quo, input_value) {
-  dplyr::filter(.data, !!var_quo == !!value)  
+  dplyr::filter(data, !!input_quo == !!input_value)  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)</code></pre>
@@ -628,60 +628,80 @@ filter_quo_value(starwars, quo(birth_year), 19)</code></pre>
 <li><p>An <strong>expression</strong> is a set of instructions to be evaluated.</p></li>
 <li><p>A <strong>quosure</strong> is an <strong>expression</strong> that carries with it the environment (the context) where it was created.</p></li>
 </ul>
-<p>Perhaps it can be useful to think of an expression as a set of instructions. In this way, a symbol can be thought of as a word in the instructions. Similarly, a quosure is an expression (set of instructions) that carries with it the context in which is was created (think of the context as a set of materials). By capturing the environment where it was created, we can be sure that the quosure will be evaluated using the “correct” values.</p>
+<p>Perhaps it can be useful to think of an expression as a set of instructions. In this way, a symbol can be thought of as a word within a set of instructions. Similarly, a quosure is an expression (set of instructions) that carries with it the context in which is was created (think of the context as a set of materials). By capturing the environment where it was created, we can be sure that the quosure will be evaluated using the “correct” values.</p>
+<p>When we send <code>quo(birth_year)</code> to the function, we are <em>not</em> sending the value of <code>birth_year</code>. Instead, we are “quoting” <code>birth_year</code>, preserving it as an unevaluated expression, in this case, a symbol.</p>
+</div>
+<div id="section-your-turn-17" class="section level5">
+<h5>Your turn</h5>
 <p>Let’s step through what’s happenning in the example above:</p>
+<ol style="list-style-type: decimal">
+<li>Run the code as-is, noting we have an emptyish print statement inside the function. We will quote-print things so we can “see” what <code>dplyr::filter()</code> “sees”.</li>
+<li>Put the expression <code>input_quo</code> inside the <code>print(quo())</code>. Rerun. Why can’t we use <code>input_quo</code> as is in the <code>dplyr::filter()</code> function?</li>
+<li>Put the expression <code>!!input_quo</code> inside the <code>print(quo())</code>. Rerun. How is this more-useful to the <code>dplyr::filter()</code> function?</li>
+</ol>
 <div class="tutorial-exercise" data-label="filter-quo-function-2" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>filter_quo_value &lt;- function(data, input_quo, input_value) {
-  dplyr::filter(.data, !!var_quo == !!value)  
+  print(quo())
+  dplyr::filter(data, !!input_quo == !!input_value)  
 }
 
 filter_quo_value(starwars, quo(birth_year), 19)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
-<p>Consider the function <code>filter_quo_value()</code> in the exercise below. The operative expression is</p>
-<pre class="r"><code>!!var_quo == !!value</code></pre>
-<p>On the right-hand side, following the <code>!!</code>, we want something that evaluates to a value. On the left-hand side, following the <code>!!</code>, we want something that evaluates to an expression (a set of instructions).</p>
-<p>We have a tool for encapsulating an expression: <code>quo()</code>, which builds a quosure. In this case, we are not using the context (set of materials) part of the quosure, only the expression.</p>
-<p>To use our function, we wrap the bare name of our column in <code>quo()</code>, in this example: <code>quo(birth_year)</code>.</p>
-<p>Like the example above, experiment with this function.</p>
-<p>We are closer, but we still have this <code>quo()</code> hanging around; it’s not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us. This is the job of the <code>enquo()</code> function.</p>
-<p>We use <code>enquo()</code> in our function to capture the argument as a quosure. Try it out:</p>
+<p>For <code>dplyr::filter()</code> to be able to access the contents of <code>input_quo</code>, we have to unquote it (using !!). This exposes the expression inside, in this case the symbol <code>birth_year</code>. The <code>filter()</code> function recognizes the symbol <code>birth_year</code> as belonging to the data frame, then evaluates it in the context of the data frame.</p>
+<hr />
+<p>We are closer to the dplyr “look-and-feel”, but we still have this <code>quo()</code> hanging around; it’s not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us (like dplyr does). This is the job of the <code>enquo()</code> function.</p>
+<p>We use <code>enquo()</code> in our function to capture the argument as a quosure.</p>
+</div>
+<div id="section-your-turn-18" class="section level5">
+<h5>Your turn</h5>
+<p>Here, we have a new function that uses the <code>enquo()</code> to capture the argument and put it into a quosure.</p>
+<ol style="list-style-type: decimal">
+<li>Run the code as-is to convince yourself “it works”.</li>
+<li>Uncomment the expression <code>input_name &lt;- &quot;birth_year&quot;</code>. Change the function call (not the function itself) so that it uses <code>input_name</code>. If you like, uncomment and use <code>print(quo())</code> to help you “see” what the function “sees”.</li>
+</ol>
 <div class="tutorial-exercise" data-label="filter-sym-value" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>filter_sym_value &lt;- function(.data, sym, value) {
+<pre class="text"><code>filter_sym_value &lt;- function(data, input_sym, input_value) {
   
-  sym &lt;- enquo(sym)
+  input_sym &lt;- enquo(input_sym)
   
-  dplyr::filter(.data, !!sym == !!value) 
+  dplyr::filter(data, !!input_sym == !!input_value) 
 }
+
+# input_name &lt;- &quot;birth_year&quot;
+# print(quo())
 
 filter_sym_value(starwars, birth_year, 19)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
-<p>Bonus task: amend the exercise above to make a call to <code>filter_sym_value()</code> using a string, <code>&quot;birth_year&quot;</code>. Do not change the function, change the call. Look earlier in this tutorial for a hint.</p>
 </div>
 </div>
 <div id="section-renaming-variables" class="section level3">
 <h3>Renaming variables</h3>
 <p>Recall this exercise:</p>
-<pre class="r"><code>var_to_min &lt;- &quot;birth_year&quot;
+<pre class="r"><code>input_name &lt;- &quot;birth_year&quot;
 
-var_min &lt;- paste0(var_to_min, &quot;_min&quot;)
+name_new &lt;- glue(&quot;{input_name}_min&quot;)
 
 starwars %&gt;%
   group_by(species) %&gt;%
-  summarise(!!sym(var_min) := min(!!sym(var_to_min), na.rm = TRUE)) </code></pre>
-<p>Let’s rewrite this as a function where we want to specify the variable that we minimise and the variable that use for grouping.</p>
-<p>Talk about <code>quo_name()</code>, remind about <code>:=</code>.</p>
+  summarise(!!sym(name_new) := min(!!sym(input_name), na.rm = TRUE)) </code></pre>
+<div id="section-your-turn-19" class="section level5">
+<h5>Your turn</h5>
+<p>Here, this is rewritten as function where we specify the variable that we minimise, <code>var_min</code>, and the variable that use for grouping, <code>var_group</code>.</p>
+<ol style="list-style-type: decimal">
+<li>Run the code to confirm that this works.</li>
+</ol>
 <div class="tutorial-exercise" data-label="renaming-variables" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>summarise_min &lt;- function(.data, var_min, var_group) {
+<pre class="text"><code>summarise_min &lt;- function(data, var_min, var_group) {
   
   var_group &lt;- enquo(var_group)
   var_min &lt;- enquo(var_min)
   
   name_var_min &lt;- quo_name(var_min)
-  name_var_new &lt;- paste0(name_var_min, &quot;_min&quot;)
+  name_var_new &lt;- glue::glue(&quot;{name_var_min}_min&quot;)
   
-  .data %&gt;%
+  data %&gt;%
     dplyr::group_by(!!var_group) %&gt;%
     dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
@@ -689,20 +709,32 @@ starwars %&gt;%
 summarise_min(starwars, birth_year, species)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
+<p>There are a couple of things to note here:</p>
+<ul>
+<li><p>We have introduced a new function from rlang, <code>quo_name()</code>. Its name suggests what it does, converts a quosure into a string. In our case, we use this to create our new variable-name.</p></li>
+<li><p>When we use <code>summarise()</code> to create our new variable in the data frame, we have to use <code>:=</code> because we have a “namey” expression where we are using unquoting (<code>!!</code>) to create the name.</p></li>
+</ul>
+</div>
 </div>
 <div id="section-multiple-variables" class="section level3">
 <h3>Multiple variables</h3>
-<p>Let’s say we want to specify more than one grouping variable. Talk about using <code>quos()</code> to capture the <code>...</code> into a list of quosures. Talk about using <code>!!!</code> to unquote a list of quosures.</p>
+<p>Let’s say we want to specify more than one grouping variable. In our function signature, we would have a <code>...</code> set of arguments to represent multiple expressions. The tidyeval framework has some tools for this situation.</p>
+<div id="section-your-turn-20" class="section level5">
+<h5>Your turn</h5>
+<p>Here, this is rewritten as function where we specify the variable that we minimise, <code>var_min</code>, and the variables that use for grouping, <code>...</code>.</p>
+<ol style="list-style-type: decimal">
+<li>Run the code to confirm that this works.</li>
+</ol>
 <div class="tutorial-exercise" data-label="multiple-variables" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
-<pre class="text"><code>summarise_more_min &lt;- function(.data, var_min, ...) {
+<pre class="text"><code>summarise_more_min &lt;- function(data, var_min, ...) {
   
-  var_group &lt;- quos(...)
+  var_group &lt;- enquos(...)
   var_min &lt;- enquo(var_min)
   
   name_var_min &lt;- rlang::quo_name(var_min)
   name_var_new &lt;- paste0(name_var_min, &quot;_min&quot;)
   
-  .data %&gt;%
+  data %&gt;%
     dplyr::group_by(!!!var_group) %&gt;%
     dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
 }
@@ -710,23 +742,27 @@ summarise_min(starwars, birth_year, species)</code></pre>
 summarise_more_min(starwars, birth_year, species, hair_color)</code></pre>
 <script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"tibble","exercise.checker":"NULL"}</script>
 </div>
+<p>To capture a list of <code>...</code> expressions as quosures, we use the <code>enquos()</code> function, rather than the <code>enquo()</code> function. To unquote our list of quosures, we use <code>!!!</code>, rather than <code>!!</code>. As Hadley and Lionel <a href="https://dplyr.tidyverse.org/articles/programming.html#capturing-multiple-variables">point out</a>, think of <code>!!!</code> as containing the three dots of <code>...</code>.</p>
+</div>
 </div>
 <div id="section-package-considerations" class="section level3">
 <h3>Package considerations</h3>
-<p>As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. <code>dplyr::filter()</code> rather than <code>filter()</code>. For commonly-used fundamental functions, like <code>quo()</code> and <code>sym()</code>, from <strong>rlang</strong>, we can import these into the package itself, avoiding the need prepend with <code>rlang::</code>. For example, see <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R"><code>utils-tidy-eval.R</code></a> in the package’s R directory.</p>
-<p>The <a href="https://github.com/r-lib/usethis"><strong>usethis</strong></a> package makes it very easy for you to use tidyeval functions in your package-functions, <em>and</em> pass R CMD CHECK. I used the <code>use_tidyeval()</code> function to generate <code>utils-tidy-eval.R</code>, for example.</p>
-<p>To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function <code>ex_filter_name_value()</code> in this package, you can inspect it <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R">here</a>. Try it out, i.e. <code>ex_filter_name_value(mtcars, &quot;cyl&quot;, 6)</code>.</p>
+<p>As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. <code>dplyr::filter()</code> rather than <code>filter()</code>. For commonly-used fundamental functions, like <code>quo()</code> and <code>sym()</code>, from <strong>rlang</strong>, we can import these into the package itself, avoiding the need prepend with <code>rlang::</code>. For example, see <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R"><code>utils-tidy-eval.R</code></a> in this package’s R directory.</p>
+<p>The <a href="http://usethis.r-lib.org"><strong>usethis</strong></a> package makes it very easy for you to use tidyeval functions in your package-functions, <em>and</em> pass R CMD CHECK. For this packagee, I used the <code>use_tidyeval()</code> function to generate <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R"><code>utils-tidy-eval.R</code></a>. As you can see, it imports and re-exports a lot of rlang functions - only a few of which we have been able to cover here.</p>
+<p>To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function <code>ex_filter_name_value()</code> in this package, you can inspect it <a href="https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R">here</a>.</p>
 </div>
 </div>
 <div id="section-more-stuff" class="section level2">
 <h2>More stuff</h2>
-<p>Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through the three main references by the tidyeval architects, you can use these to deepen your knowledge ,and introduce yourself to the supporting theory:</p>
+<p>Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through these references by the tidyeval architects, you can use these to deepen your knowledge ,and introduce yourself to the supporting theory:</p>
 <ul>
 <li><a href="http://dplyr.tidyverse.org/articles/programming.html">Programming with dplyr</a></li>
 <li><a href="http://rlang.tidyverse.org/articles/tidy-evaluation.html">Tidy evaluation</a></li>
 <li><a href="https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/">Erratum tidyr 0.7.0</a></li>
+<li><a href="https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/">Tidy evaluation in ggplot2</a></li>
 </ul>
-<p>There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval. Mara Averick has the canonical <a href="https://maraaverick.rbind.io/2017/08/tidyeval-resource-roundup/">tidyeval resource roundup</a>, so the best thing I can do here is to point you that-a-way.</p>
+<p>There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval; fortunately “tidyeval” is a very Google-firendly term.</p>
+<hr />
 <div class="tutorial-exercise" data-label="ggplot2" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>library(&quot;rlang&quot;)
 library(&quot;ggplot2&quot;)
