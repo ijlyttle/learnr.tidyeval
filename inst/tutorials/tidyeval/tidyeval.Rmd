@@ -298,7 +298,7 @@ input_value <- 19
 glue("We want rows where the birth_year is {input_value}.")
 ```
 
-Recall that we are composing a string by unquoting: `{input_value}` is replaced with *value* of `name`, using the context from which `glue()` is called. It takes the qutoed expression and evalutes it immediately.
+Recall that we are composing a string by unquoting: `{input_value}` is replaced with *value* of `name`, using the context from which `glue()` is called. It takes the quoted expression and evaluates it immediately.
 
 ---
 
@@ -453,7 +453,7 @@ input_value <- 19
 filter(data, !!sym(input_name) == !!input_value)
 ```
 
-By using the `.data` pronoun, we can make sure that the expression makes sense in the context of the data, and return an informative error messsage if it does not.
+By using the `.data` pronoun, we can make sure that the expression makes sense in the context of the data, and return an informative error message if it does not.
 
 ---
 
@@ -629,7 +629,7 @@ When we send `quo(birth_year)` to the function, we are *not* sending the value o
 
 ##### Your turn
 
-Let's step through what's happenning in the example above:
+Let's step through what's happening in the example above:
 
 1. Run the code as-is, noting we have an emptyish print statement inside the function. We will quote-print things so we can "see" what `dplyr::filter()` "sees".
 2. Put the expression `input_quo` inside the `print(quo())`. Rerun. Why can't we use `input_quo` as is in the `dplyr::filter()` function? 
@@ -750,7 +750,7 @@ To capture a list of `...` expressions as quosures, we use the `enquos()` functi
 
 As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in this package's R directory.  
 
-The [__usethis__](http://usethis.r-lib.org) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. For this packagee, I used the `use_tidyeval()` function to generate [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R). As you can see, it imports and re-exports a lot of rlang functions - only a few of which we have been able to cover here.
+The [__usethis__](http://usethis.r-lib.org) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. For this package, I used the `use_tidyeval()` function to generate [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R). As you can see, it imports and re-exports a lot of rlang functions - only a few of which we have been able to cover here.
 
 To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). 
 
@@ -763,5 +763,5 @@ Hopefully, you have been able to use this tutorial to get a sense of tidyeval pr
 - [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
 - [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
 
-There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval; fortunately "tidyeval" is a very Google-firendly term.
+There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval; fortunately "tidyeval" is a very Google-friendly term.
 

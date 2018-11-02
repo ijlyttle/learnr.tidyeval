@@ -10,6 +10,9 @@ Status](https://travis-ci.org/ijlyttle/learnr.tidyeval.svg?branch=master)](https
 The goal of learnr.tidyeval is to support an interactive tutorial for
 tidyeval.
 
+Please see the operational shiny-app at
+<https://ijlyttle.shinyapps.io/tidyeval>
+
 ## Installation
 
 You can install learnr.tidyeval from github with:

@@ -1,7 +1,7 @@
 #' filter on name and value
 #'
-#' @param data          `data.frame` to be filtered
-#' @param input_name    `character`, name of column within `.data` to filter
+#' @param data         `data.frame` to be filtered
+#' @param input_name   `character`, name of column within `.data` to filter
 #' @param input_value  object
 #'
 #' @return filtered copy of `data`

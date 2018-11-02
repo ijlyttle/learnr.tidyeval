@@ -7,7 +7,7 @@ Authors@R: c(
   person("Hadley", "Wickham", ,"hadley@rstudio.com", "aut", comment = "tidyeval framework")
   )
 Description: This is an experiment to try to teach some tidyeval concepts, and use the learnr package.
-Depends: R (>= 3.3.1)
+Depends: R (>= 3.1)
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
