@@ -756,7 +756,7 @@ To demonstrate that you can use these steps to write a function that works and p
 
 ## More stuff
 
-Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through these references by the tidyeval architects, you can use these to deepen your knowledge ,and introduce yourself to the supporting theory:
+Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through these references by the tidyeval architects. You can use these to deepen your knowledge, and introduce yourself to the supporting theory:
 
 - [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
 - [Tidy evaluation](http://rlang.tidyverse.org/articles/tidy-evaluation.html)
@@ -765,33 +765,3 @@ Hopefully, you have been able to use this tutorial to get a sense of tidyeval pr
 
 There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval; fortunately "tidyeval" is a very Google-firendly term.
 
----
-
-```{r ggplot2, exercise=TRUE}
-library("rlang")
-library("ggplot2")
-
-input_dataset <- "diamonds"
-input_x <- "carat"
-input_y <- "price"
-input_color <- "cut"
-
-df <- eval_tidy(!!sym(input_dataset))
-
-ggplot(
-  data = df, aes(!!sym(input_x), !!sym(input_y))
-) + geom_point()
-```
-
-```{r, echo=TRUE}
-sliderInput("bins", "Number of bins:", min = 1, max = 50, value = 30)
-plotOutput("distPlot")
-```
-
-```{r, echo=TRUE, context="server"}
-output$distPlot <- renderPlot({
-  x <- faithful[, 2]  # Old Faithful Geyser data
-  bins <- seq(min(x), max(x), length.out = input$bins + 1)
-  hist(x, breaks = bins, col = 'darkgray', border = 'white')
-})
-```

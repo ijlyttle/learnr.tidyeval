@@ -4,21 +4,21 @@
 \alias{ex_filter_name_value}
 \title{filter on name and value}
 \usage{
-ex_filter_name_value(.data, var_name, value)
+ex_filter_name_value(data, input_name, input_value)
 }
 \arguments{
-\item{.data}{`data.frame` to be filtered}
+\item{data}{`data.frame` to be filtered}
 
-\item{var_name}{`character`, name of column within `.data` to filter}
+\item{input_name}{`character`, name of column within `.data` to filter}
 
-\item{value}{object,}
+\item{input_value}{object}
 }
 \value{
-filtered copy of `.data`
+filtered copy of `data`
 }
 \description{
 filter on name and value
 }
 \examples{
-\dontrun{ex_filter_name_value(mtcars, "cyl", 6)}
+ ex_filter_name_value(mtcars, "cyl", 6)
 }
