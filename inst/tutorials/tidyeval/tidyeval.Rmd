@@ -31,7 +31,7 @@ At first glance, tidyeval might seem just as mysterious - a new way to deal with
 Of course, none of this material is possible without the work done by Lionel Henry and Hadley Wickham, who developed the tidyeval framework. Indeed, the examples shown here are adapted from their sources:
 
 - [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
-- [Tidy evaluation](http://rlang.tidyverse.org/articles/tidy-evaluation.html)
+- [Tidy evaluation](https://tidyeval.tidyverse.org/)
 - [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
 - [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
 
@@ -759,7 +759,7 @@ To demonstrate that you can use these steps to write a function that works and p
 Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through these references by the tidyeval architects. You can use these to deepen your knowledge, and introduce yourself to the supporting theory:
 
 - [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
-- [Tidy evaluation](http://rlang.tidyverse.org/articles/tidy-evaluation.html)
+- [Tidy evaluation](https://tidyeval.tidyverse.org/)
 - [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
 - [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
 
