@@ -11,8 +11,6 @@ runtime: shiny_prerendered
 library("glue")
 library("dplyr")
 library("learnr")
-library("tibble")
-library("ggplot2")
 library("learnr.tidyeval")
 
 options(width = 80)
