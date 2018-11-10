@@ -603,7 +603,7 @@ The function above works like we expect, but it does not yet "look-and-feel" lik
 We have changed the function so that it takes a *quosure* instead of a *string*. Try out the following, then we will discuss what is going on.
 
 1. Run the code to make confirm it works as we expect.
-2. Run the code using different arguments, e.g. `filter_name_value(mtcars, quo(cyl), 6)`
+2. Run the code using different arguments, e.g. `filter_quo_value(mtcars, quo(cyl), 6)`
 
 ```{r filter-quo-function, exercise=TRUE}
 filter_quo_value <- function(data, input_quo, input_value) {
