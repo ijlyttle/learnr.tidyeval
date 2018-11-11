@@ -230,7 +230,7 @@ The tidyverse would be, as C3PO might say, "not entirely stable" if defining a v
 
 ----
 
-Perhaps we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then the in the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
+Perhaps we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then in the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
 
 In the next sections, we will use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. 
 
@@ -319,7 +319,7 @@ The effect of the `!!` operator is to say, "Evaluate me now using my context!!".
 
 ---
 
-We can see take a peek at what will happen, "seeing" the function call from dplyr's perspective, using the `quo()` function as a debugging tool. 
+We can take a peek at what will happen, "seeing" the function call from dplyr's perspective, using the `quo()` function as a debugging tool. 
 
 ##### Your turn
 
@@ -602,7 +602,7 @@ The function above works like we expect, but it does not yet "look-and-feel" lik
 
 We have changed the function so that it takes a *quosure* instead of a *string*. Try out the following, then we will discuss what is going on.
 
-1. Run the code to make confirm it works as we expect.
+1. Run the code to confirm it works as we expect.
 2. Run the code using different arguments, e.g. `filter_quo_value(mtcars, quo(cyl), 6)`
 
 ```{r filter-quo-function, exercise=TRUE}
