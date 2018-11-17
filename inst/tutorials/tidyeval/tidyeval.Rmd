@@ -415,7 +415,7 @@ In (2.), the variable `parsec` *is* found in our context - dplyr evaluates `pars
 
 ---
 
-The tidyeval framework has tool to make sure that we look in _only_ the data for a variable, a pronoun named `.data`. You can use this to compose expressions that throw an error if variables are not found in the data.
+The tidyeval framework has a tool to make sure that we look in _only_ the data for a variable, a pronoun named `.data`. You can use this to compose expressions that throw an error if variables are not found in the data.
 
 Here are some examples:
 
