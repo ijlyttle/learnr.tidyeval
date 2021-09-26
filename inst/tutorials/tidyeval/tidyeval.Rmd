@@ -386,6 +386,23 @@ input_vars <- c("name", "height")
 str_select(starwars, input_vars)
 ```
 
+There's another reason to use the `all_of()` function:
+
+  - Run the following code as-is to find out why. What happened?
+  - Improve the function code by using `all_of()`.
+
+```{r tidy-select-beware, exercise=TRUE}
+str_select_new <- function(df, name) {
+  dplyr::select(df, name)
+}
+
+input_vars <- c("name", "height")
+
+str_select_new(starwars, input_vars)
+```
+
+
+
 ---
 
 ### Action functions
@@ -539,523 +556,177 @@ These will let you use the pronouns, etc., conveniently and keep you legal with 
 
 ## Variables as bare names
 
-## Using tidy-evaluation functions
+If you are writing functions for interactive R use, you may want them to have the same look-and-feel as Tidyverse functions.
+This means referring to data-frame columns using bare names.
 
-### Motivation
+The idea is the same as when we made the string-based functions: we need to be unambiguous about the context of names -- data-frame or environment. 
+The techniques are slightly different.
 
-The next couple of sections will talk about how we can use, and even write, functions that use tidy evaluation. As we make our way through these sections, I'd like to keep a motivating case in mind, writing __shiny__ apps. 
+Here, we will recreate our functions from the previous section, but use bare names instead of strings.
 
-In a shiny app, let's say you want your user to be able to specify a data frame, filter on some condition, then make a scatterplot, letting your user specify your axes. To keep the example a little simpler, let's say our goal is to be able to specify a data frame, then a filtering condition.
 
-When I write a shiny app, I want to be able to divide my code up into two "piles":
+### Selection functions
 
-1. Code that does stuff outside of shiny, that I can run interactively and test - you know, just [regular R code](https://tenor.com/view/rcode-typing-gif-11364811)
-2. Code to adapt the code from group (1.) into shiny - I want this code to be as "light" as possible
-
-I'll refer back to this motivating example as much as I can, as we make our way through the next couple of sections. 
-
----
-
-In tidy evaluation, we compose expressions. These are the three types of expressions; following the nomenclature Lionel used in his presentations:
-
-- **action** expressions: these evaluate to a set of values, e.g. `dplyr::filter()`.
-- **selection** expressions: these evaluate to identify columns in a data frame, e.g. `dplyr::select()`.
-- **named-action** expressions: these are action expressions that have a name-assignment, e.g. `dplyr::mutate()`
-
-### Action expressions
-
-As you saw earlier, the `dplyr::filter()` function takes a series of expressions that it evaluates to `TRUE` or `FALSE` to determine which rows to return. 
-
-Let's consider a version of our shiny app where we consider the `starwars` data frame, and we want to specify a single filtering condition, testing for equality. In this case, we will need
-
-- an input that specifies the variable for the filter - this will be a character string
-- an input that specifies the value - this will be a numeric value
-
-To simplify further, we will filter on `birth_year`, we will vary only the value. Let's get this working for "just regular R", by specifying a value for the input, and running the code that we would then put into part of a shiny app:
+As a reminder, **selection** functions are functions where we specify columns in an existing data frame, e.g. `dplyr::select()`.
 
 #### Your turn
 
-Run the following code block:
-
-```{r filter-input-value, exercise=TRUE}
-input_value <- 19
-
-filter(starwars, birth_year == input_value)
-```
-
-So far so good - `filter()` looks for `birth_year` in the data and finds it, then looks for `input_value` as a variable in the data, does not find it, then finds `input_value` as a variable in the context.
-
----
-
-You will need to use a little imagination because this is a (very) contrived example. Let's imagine that we don't know that `starwars` does not have a column named `input_value`. We want to make this evaluation "airtight", we want to make sure that we use `input_value` from our context.
-
-#### Your turn
-
-Let's look back at our string example; run the following code block:
-
-```{r glue-input-value, exercise=TRUE}
-library("glue")
-
-input_value <- 19
-
-glue("We want rows where the birth_year is {input_value}.")
-```
-
-Recall that we are composing a string by unquoting: `{input_value}` is replaced with *value* of `name`, using the context from which `glue()` is called. It takes the quoted expression and evaluates it immediately.
-
----
-
-Instead of composing strings, we want to compose expressions; the tidy evaluation framework provides an __unquoting__ function.
-The `!!` operator acts on expressions in tidy evaluation like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result into the expression.
-
-#### Your turn
-
-1. Run the following code using the starting state: `input_value <- 19`, and `birth_year == input_value`. This should return observations for Luke and Leia.
-2. Change these expressions to `birth_year <- 19` and `birth_year == birth_year`, then run the code again. What happens? Why?
-3. Change the second expression to `birth_year == !!birth_year`, then run the code again. Feel better?
-
-```{r filter-uq-value, exercise=TRUE}
-input_value <- 19 
-
-filter(starwars, birth_year == input_value) 
-```
-
-The effect of the `!!` operator is to say, "Evaluate me now using my context!!". This can be an effective tool to bring clarity to our code. It's a way to specify, both to the computer and to anyone reading it, that this part of the expression will be evaluated using the context, *not* the data.
-
----
-
-We can take a peek at what will happen, "seeing" the function call from dplyr's perspective, using the `quo()` function as a debugging tool. 
-
-#### Your turn
-
-Here, we are doing just as above, but instead of looking at the result, have a look at the output of the `quo()` call:
-
-1. Run the following code using the starting state: `input_value <- 19`, and `birth_year == input_value`.
-2. Change these expressions to `birth_year <- 19` and `birth_year == birth_year`, then run the code again. 
-3. Change the second expression to `birth_year == !!birth_year`, then run the code again. 
-
-```{r filter-uq-value-quo, exercise=TRUE}
-input_value <- 19 
-
-quo(
-  filter(starwars, birth_year == input_value)
-)
-```
-
----
-
-(For extra credit, hit the "Start Over" button in the code block, change `birth_year == input_value` to `birth_year == !!input_value`, have a think about what you expect to see, then run the code.)
-
-We see this word "quosure" again. I find it useful to think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions: e.g. `^filter(starwars, birth_year == 19)`, and we are given an indication of the materials: something like `0x7fca3107a468` (a memory location for an environment). For now, we can use the `quo()` function to verify that our instructions are what we expect.
-
------
-
-We have worked out how to specify a value unambiguously. Our next step is to specify the data frame and the column to filter. 
-
-Symbols can be used to compose expressions. The tidy evaluation framework provides a function to convert strings into symbols, `sym()`:
-
-```{r}
-str(
-  sym("foo")  
-)
-```
-
-We can use the `sym()` function to help build the left-hand-side of our expression.
-
-#### Your turn
-
-This code does not work... yet.
-
-1. Run the code-block as-is. Use the output of `quo()` to "see" what dplyr will see when it evaluates the expression.
-
-2. It looks like the expression `sym(input_name)` has not yet been evaluated. Apply an operator to `sym(input_name)` that will **evaluate it immediately**. 
-
-<details>
- <summary>**Hint:**</summary>
- <p>`!!`</p>
-</details>
-
-For extra credit, remove the `quo()` to make sure it still returns the data we expect.
-
-```{r filter-sym, exercise=TRUE}
-data <- starwars
-
-input_name <- "birth_year"
-input_value <- 19
-
-quo(
-  filter(data, sym(input_name) == !!input_value)
-)
-```
-
-Notice that we don't have to do anything special with the first argument to `filter()`, the data frame. We can replace this data frame with an equivalent data frame and get the same result; `filter()` is __referentially transparent__ for this argument.
-
------
-
-There is one more thing we can do to make things airtight.
-
-#### Your turn
-
-Consider this bit of mischief:
-
-1. Run this code as is - what happens?
-2. Uncomment the expression `parsec <- 12`, rerun the code. What happens?
-
-How is what happens in (1.) different from what happens in (2.)? 
-
-```{r filter-mischeif, exercise=TRUE}
-data <- starwars
-
-input_name <- "parsec"
-input_value <- 19
-
-# parsec <- 12
-
-filter(data, !!sym(input_name) == !!input_value)
-```
-
-In (1.) we get an error-message that `parsec` is not found. Clearly, it is not a column in the data-frame, and it is not in our context. 
-
-In (2.), the variable `parsec` *is* found in our context - dplyr evaluates `parsec` to `12`, there are no rows where `12 == 19`, so no rows are returned.
-
----
-
-The tidy evaluation framework has a tool to make sure that we look in _only_ the data for a variable, a pronoun named `.data`. You can use this to compose expressions that throw an error if variables are not found in the data.
-
-Here are some examples:
-
-#### Your turn
-
-1. Run the code as-is to confirm that the `.data` pronoun works.
-2. Change the expression from `.data$birth_year` to `.data[["birth_year"]]`, rerun - just to make sure that we can use `[[` notation as well as `$` notation.
-3. Change the name of the data argument from `starwars` to `mtcars`, rerun to see what happens when a specified variable *does not* appear in the given data frame.
-
-```{r data-pronoun, exercise=TRUE}
-filter(starwars, .data$birth_year == 19)
-```
-
----
-
-#### Your turn
-
-Here, we will fortify the example from before, using the `.data` pronoun.
-
-1. Run the code as-is. It should work as expected.
-1. Change the left-side of filtering expression from `!!sym(input_name)` to `.data[[input_name]]`. Rerun the code, everything should work as you expect.
-1. Change `input_name <- "birth_year"` to `input_name <- "parsec"`, rerun the code. What happens?
-1. Uncomment the expression `parsec <- 12`, rerun the code. What happens now?
-
-```{r filter-mischeif-managed, exercise=TRUE}
-data <- starwars
-
-input_name <- "birth_year"
-input_value <- 19
-
-# parsec <- 12
-
-filter(data, !!sym(input_name) == !!input_value)
-```
-
-By using the `.data` pronoun, we can make sure that the expression makes sense in the context of the data, and return an informative error message if it does not.
-
----
-
-When we use tidy evaluation with dplyr functions, dplyr evaluates the expressions that you provide. It can be useful to keep in mind what the dplyr function is evaluating your expressions *to*. `filter()` evaluates its expressions to logical *values* - it wants `TRUE` or `FALSE`, so I think of `filter()` as wanting action expressions. Other dplyr functions may expect other types of expressions, let's look at some of those differences.   
-
-### Selection expressions
-
-There is a family of functions that use the [__tidyselect__](https://CRAN.R-project.org/package=tidyselect) package as their back-end; `dplyr::select()` is the most prominent. Other functions that use selection expressions include `tidyr::gather()` and `dplyr::pull()`. They all work the same way because they all need to identify a set of columns within an existing data source.
-
-This excellent [tidyr article](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/) dives into the theory and design choices. There are two big points here:
-
-1. Selection functions evaluate its expressions into integers that indicate column-positions in the data source.
-
-2. It is best-practice to provide expressions that make sense *only* in the data, not in the surrounding context.
-
-Let's look at some examples of these principles in action. The usual way to call a select function is just to use the bare column-names, which we now know as symbols. 
-
-#### Your turn
-
-1. Run the code as-is, noting the columns in the returned data frame.
-2. Comment out the first line of code, uncomment the second line, rerun the code block. Confirm that you get the same result. 
-
-```{r selecty-intro, exercise=TRUE}
-select(starwars, name, species : starships)
-# select(starwars, 1, 10 : 13)
-```
-
-If we want to insist that we look only in the data for the name (not a bad idea), we can use the `.data` pronoun:
-
-```{r eval=FALSE}
-select(starwars, .data$name, .data$species : .data$starships)
-```
-
-Here's where things can get potentially difficult. Let's say that you want to select from a column-position to until the last column. This works:
-
-```{r eval=FALSE}
-select(starwars, .data$name, .data$species : ncol(starwars))
-```
-
-But the expression `ncol(starwars)` refers to the context where `starwars` is found. Our best-practice with selection functions is to refer *only* to the data. 
-
-The __tidyselect__ package gives us a solution, a helper function called `last_col()` (if functions had hex-stickers, I imagine this hex-sticker would feature a pint glass, but I digress).
-
-#### Your turn
-
-1. Run the code below, to set your expectations.
-2. Replace `.data$starships` with `last_col()`. Rerun the code block to confirm you get the same result.
-
-```{r selecty, exercise=TRUE}
-library("tidyselect")
-select(starwars, .data$name, .data$species : .data$starships)
-```
-
-### Named-action expressions
-
-Some dplyr functions, in addition to evaluating action expressions, assign column names. These include `mutate()`, `summarise()`, `transmute()`, and, optionally, `group_by()`.
-
-For an example, let's find the minimum `birth_year` for each species.
-
-```{r}
-starwars %>%
-  group_by(species) %>%
-  summarise(birth_year_min = min(birth_year, na.rm = TRUE)) 
-```
-
-Let's say we want to parameterise this, in case we want to do the same thing with `height`. Here's one way to do it:
-
-```{r}
-input_name <- "birth_year"
-
-name_new <- glue("{input_name}_min")
-
-starwars %>%
-  group_by(species) %>%
-  summarise(!!sym(name_new) := min(!!sym(input_name), na.rm = TRUE)) 
-```
-
-You can see there are a few things going on here:
-
-1. We create a new variable-name by appending `"_min"` to `input_name`. 
-
-2. We adapt the `summarise()` expression:
-
- - Note that it has both a left side (new name) and a right side (value). 
- - We can use our unquoting tools on both sides. 
- - However, the `=` operator does not support unquoting on the left-side, so we use the `:=` operator from the __rlang__ package - designed just for this purpose. 
-
-When composing named-action expressions, keep in mind that we have to use `:=` operator if we evaluate anything on the left side (the name).
-
-One other point, because the left side is going to end up as a name, you can unquote a symbol, `!!sym(name_new)`, or a string, `!!name_new`.
-
-#### Your turn
-
-Evaluate this solution for yourself. 
-
-1. Run the original code, as-is.
-2. Adapt the solution shown above, using `input_name`, `name_new`, etc. Rerun the code to make sure it works for you.
-3. Try using `!!name_new` on the left side of the `:=` operator. Rerun the code.
-
-```{r namey-summarise, exercise=TRUE}
-starwars %>%
-  group_by(species) %>%
-  summarise(birth_year_min = min(birth_year, na.rm = TRUE)) 
-```
-
-For extra credit, wrap the call in `quo()` to see the instructions. For the purpose of seeing the instructions, you may wish to do something like `name_new <- glue("{input_name}_min") %>% as.character()`.
-
-Have fun!
-
-## Writing tidy-evaluation functions
-
-In the previous section, we learned how to compose expressions for use with functions that use tidy evaluation; in this section, we try to complete that picture. Here, we will see how to write functions that use tidy evaluation.
-
-The overall goal is to write code, and to let your functions' users write code, that makes it clear what is intended to happen; that makes it unambiguous how an expression is to be evaluated.
-
-Recall our example where we filtered the `starwars` dataset based on a string and a numeric value.
-
-```{r filter-str-ex, eval=FALSE}
-data <- starwars
-input_name <- "birth_date"
-input_value <- 19
-
-filter(data, !!sym(input_name) == !!input_value)
-```
-
-Our first attempt at a function will wrap our existing functionality; it will take a data frame, a string that describes a variable in the data frame, and a value.  
-
-#### Your turn
-
-Here's our function:
-
-1. Run the code to make confirm it works as we expect.
-2. Run the code using different arguments, e.g. `filter_name_value(mtcars, "cyl", 6)`
-
-```{r filter-str-function, exercise=TRUE}
-filter_name_value <- function(data, input_name, input_value) {
-  dplyr::filter(data, !!sym(input_name) == !!input_value)  
+Let's say that we want to pass bare-names on to a select function.
+
+We are going to adapt the string-variable function: 
+
+  - Let's try the pass-the-dots strategy:
+    - in the function signature, use `,,,` instead of `str_vars`.
+    - in `dplyr::select()`, use `...` instead of `all_of(str_vars)`.
+  - Comment and uncomment to try the other function calls.
+    Is it working as you expect?
+    
+```{r tidy-select-bare, exercise=TRUE}
+bare_select <- function(df, str_vars) {
+  dplyr::select(df, all_of(str_vars))
 }
 
-filter_name_value(starwars, "birth_year", 19)
+bare_select(starwars, height, mass)
+# bare_select(starwars, c(height, mass))
+# bare_select(starwars, height:birth_year)
+# bare_select(starwars, contains("_"))
 ```
 
-### Quosures
+Passing-the-dots is the simplest way that will work, most of the time.
 
-The function above works like we expect, but it does not yet "look-and-feel" like dplyr. For example, we would like to use a bare symbol, rather than a string to identify the variable.
+There is another way to do much the same thing, but will work if you have more than one place to send your arguments: "embrace the arguments".
+Instead of invoking the dots in the `dplyr::select()` function, you wrap a named argument in `{{}}`, e.g. `{{ vars }}`.
 
-#### Your turn
+Let's adapt the string-variable function:
 
-We have changed the function so that it takes a *quosure* instead of a *string*. Try out the following, then we will discuss what is going on.
+  - This time using the "embrace the arguments" technique:
+    - in the function signature, replace `str_vars` with `vars`.
+    - in the `dplyr::select()` function, replace `all_of(str_vars)` with `{{ vars }}`.
+  - Comment and uncomment to try the other function calls.
+    - is it working as you expect?
+    - why does the last one not work?
 
-1. Run the code to confirm it works as we expect.
-2. Run the code using different arguments, e.g. `filter_quo_value(mtcars, quo(cyl), 6)`
-
-```{r filter-quo-function, exercise=TRUE}
-filter_quo_value <- function(data, input_quo, input_value) {
-  dplyr::filter(data, !!input_quo == !!input_value)  
+```{r tidy-select-bare-2, exercise=TRUE}
+bare_select <- function(df, str_vars) {
+  dplyr::select(df, all_of(str_vars))
 }
 
-filter_quo_value(starwars, quo(birth_year), 19)
+bare_select(starwars, height)
+# bare_select(starwars, c(height, mass))
+# bare_select(starwars, height:birth_year)
+# bare_select(starwars, contains("_"))
+
+# this one won't work - why?
+# bare_select(starwars, height, mass)
 ```
-
-This might be a good time to discuss symbols, expressions, and quosures a little more:
-
-- A **symbol** is an atomic component of an **expression**; a symbol represents an object.
-
-- An **expression** is a set of instructions to be evaluated.
-
-- A **quosure** is an **expression** that carries with it the environment (the context) where it was created.
-
-Perhaps it can be useful to think of an expression as a set of instructions. In this way, a symbol can be thought of as a word within a set of instructions. Similarly, a quosure is an expression (set of instructions) that carries with it the context in which is was created (think of the context as a set of materials). By capturing the environment where it was created, we can be sure that the quosure will be evaluated using the "correct" values. 
-
-When we send `quo(birth_year)` to the function, we are *not* sending the value of `birth_year`. Instead, we are "quoting" `birth_year`, preserving it as an unevaluated expression, in this case, a symbol. 
-
-#### Your turn
-
-Let's step through what's happening in the example above:
-
-1. Run the code as-is, noting we have an emptyish print statement inside the function. We will quote-print things so we can "see" what `dplyr::filter()` "sees".
-2. Put the expression `input_quo` inside the `print(quo())`. Rerun. Why can't we use `input_quo` as is in the `dplyr::filter()` function? 
-3. Put the expression `!!input_quo` inside the `print(quo())`. Rerun. How is this more-useful to the `dplyr::filter()` function? 
-
-```{r filter-quo-function-2, exercise=TRUE}
-filter_quo_value <- function(data, input_quo, input_value) {
-  print(quo())
-  dplyr::filter(data, !!input_quo == !!input_value)  
-}
-
-filter_quo_value(starwars, quo(birth_year), 19)
-```
-
-
-For `dplyr::filter()` to be able to access the contents of `input_quo`, we have to unquote it (using !!). This exposes the expression inside, in this case the symbol `birth_year`. The `filter()` function recognizes the symbol `birth_year` as belonging to the data frame, then evaluates it in the context of the data frame.
 
 ---
 
-We are closer to the dplyr "look-and-feel", but we still have this `quo()` hanging around; it's not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us (like dplyr does). This is the job of the `enquo()` function.
+The `{{}}` operator (the Tidyverse team calls it "curly curly") is interpreted in tidy evaluation as:
 
-We use `enquo()` in our function to capture the argument as a quosure. 
+  - do not evaluate the contents just yet.
+  - when you *do* evaluate the contents, interpret them in the context of the data-frame.
+  
+If you are familiar with earlier versions of tidy evaluation, `{{ vars }}` is equivalent to `!!enquo(vars)`.
+The `!!enquo()` way still works and will continue to work (try it out if you like).
+That said, I think the `{{}}` notation is cleaner, and it helps my mental model to reserve `!!` for evaluating variables in the environment.
+
+### Action functions
+
+You will remember **action** functions; these are functions that act on columns of a data frame.
+
+Again, our goal is to write functions to be unambiguous as to how to evaluate a variable: in the context of the data-frame or the environment.
+
+  - to evaluate in the data-frame, use `{{}}`.
+  - to evaluate in the environment, use `!!`.
 
 #### Your turn
 
-Here, we have a new function that uses the `enquo()` to capture the argument and put it into a quosure.
+Let's start again with the string-varaible function, and change it to a bare-name function:
 
-1. Run the code as-is to convince yourself "it works".
-2. Uncomment the expression `input_name <- "birth_year"`. Change the function call (not the function itself) so that it uses `input_name`. If you like, uncomment and use `print(quo())` to help you "see" what the function "sees".
+  - in the function signature, change `str_var` to `var`.
+  - in the `dplyr::filter()` call, change `.data[[str_var]]` to `{{ var }}`.
+  - try it out!
 
-```{r filter-sym-value, exercise=TRUE}
-filter_sym_value <- function(data, input_sym, input_value) {
-  
-  input_sym <- enquo(input_sym)
-  
-  dplyr::filter(data, !!input_sym == !!input_value) 
+```{r filter-bare, exercise=TRUE}
+bare_filter <- function(df, str_var, value) {
+  dplyr::filter(df, .data[[str_var]] == !!value)
 }
 
-# input_name <- "birth_year"
-# print(quo())
-
-filter_sym_value(starwars, birth_year, 19)
+bare_filter(starwars, species, "Droid")
 ```
 
-### Renaming variables
+If you are evaluating a variable not in the context of a data frame, be sure to insist it be evaluated immediately by using the `!!` operator.
 
-Recall this exercise:
+We saw this [trap](https://www.youtube.com/watch?v=4F4qzPbcFiA) in the previous section.
 
-```{r eval=FALSE}
-input_name <- "birth_year"
+```{r filter-bare-bang-bang, exercise=TRUE}
+bare_filter <- function(df, var, name) {
+  dplyr::filter(df, {{ var }} == name)
+}
 
-name_new <- glue("{input_name}_min")
-
-starwars %>%
-  group_by(species) %>%
-  summarise(!!sym(name_new) := min(!!sym(input_name), na.rm = TRUE)) 
+bare_filter(starwars, species, "Droid")
 ```
+
+The variable `name` exists among the columns of `starwars`. 
+If you tried `bare_filter(mtcars, cyl, 6)`, it would work fine.
+
+  - In the `bare_filter` function above, rewrite the filtering expression as `{{ var }} == !!name`.
+    Does it work now?
+
+---
 
 #### Your turn
 
-Here, this is rewritten as function where we specify the variable that we minimise, `var_min`, and the variable that use for grouping, `var_group`.
+Let's revisit the `ggplot::aes()` problem.
+Adapt the `bare_scatterplot()` function to use `ggplot2::aes()` with bare names:
 
-1. Run the code to confirm that this works.
+  - in the function signature, replace `str_var_x` and `str_var_y` with `var_x` and `var_y`.
+  - in the `ggplot2::aes()` call, replace `.data[[str_var_x]]` with `{{ var_x }}`.
+  - in the `ggplot2::aes()` call, replace `.data[[str_var_y]]` with `{{ var_y }}`.
+  - try it out!
 
-```{r renaming-variables, exercise=TRUE}
-summarise_min <- function(data, var_min, var_group) {
-  
-  var_group <- enquo(var_group)
-  var_min <- enquo(var_min)
-  
-  name_var_min <- quo_name(var_min)
-  name_var_new <- glue::glue("{name_var_min}_min")
-  
-  data %>%
-    dplyr::group_by(!!var_group) %>%
-    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
+```{r scatter-bare, exercise=TRUE}
+bare_scatterplot <- function(df, str_var_x, str_var_y) {
+  ggplot2::ggplot(df, ggplot2::aes(x = .data[[str_var_x]], y = .data[[str_var_y]])) +
+    ggplot2::geom_point()
 }
 
-summarise_min(starwars, birth_year, species)
+bare_scatterplot(starwars, height, mass)
+
+# verify that `ggplot2::aes()` is an action function
+# bare_scatterplot(starwars, height / 2, mass)
 ```
 
-There are a couple of things to note here: 
+---
 
-- We have introduced a new function from rlang, `quo_name()`. Its name suggests what it does, converts a quosure into a string. In our case, we use this to create our new variable-name.
+### Action functions with naming
 
-- When we use `summarise()` to create our new variable in the data frame, we have to use `:=` because we have a named-action expression where we are using unquoting (`!!`) to create the name.
+For bare-name functions, assigning a name to a data-frame is almost exactly the same as for string-variable functions:
 
-### Multiple variables
-
-Let's say we want to specify more than one grouping variable. In our function signature, we would have a `...` set of arguments to represent multiple expressions. The tidy evaluation framework has some tools for this situation.
+  - Use the `:=` operator (from **rlang**) to assign the name.
+  - Specify the name itself using the curly-curly syntax **in quotes**.
+  - For example: `"{{ name }}" := ...`
+  
+The only difference from string-variable functions is to use curly-curly instead of single-curly.
 
 #### Your turn
 
-Here, this is rewritten as function where we specify the variable that we minimise, `var_min`, and the variables that use for grouping, `...`.
+The goal of this function is to group a data frame **by** a variable, then to summarize using the **mean** of another variable:
 
-1. Run the code to confirm that this works.
+  - Make sure this function works as you expect.
+  - Change the left-side of the `summarise()` expression, `mean =` so that it uses the value of `var`.
+  - Further change the left-side of this expression so that if `var` is `height`, the new variable is named `"height_mean"`.
 
-```{r multiple-variables, exercise=TRUE}
-summarise_more_min <- function(data, var_min, ...) {
-  
-  var_group <- enquos(...)
-  var_min <- enquo(var_min)
-  
-  name_var_min <- rlang::quo_name(var_min)
-  name_var_new <- paste0(name_var_min, "_min")
-  
-  data %>%
-    dplyr::group_by(!!!var_group) %>%
-    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
+```{r naming-bare, exercise=TRUE}
+bare_mean_by <- function(df, by, var) {
+  df %>%
+    dplyr::group_by({{ by }}) %>%
+    dplyr::summarise(mean = mean({{ var }}))
 }
 
-summarise_more_min(starwars, birth_year, species, hair_color)
+bare_mean_by(starwars, species, height)
 ```
-
-To capture a list of `...` expressions as quosures, we use the `enquos()` function, rather than the `enquo()` function. To unquote our list of quosures, we use `!!!`, rather than `!!`. As Hadley and Lionel [point out](https://dplyr.tidyverse.org/articles/programming.html#capturing-multiple-variables), think of `!!!` as containing the three dots of `...`.
-
-### Package considerations
-
-As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in this package's R directory.  
-
-The [__usethis__](http://usethis.r-lib.org) package makes it very easy for you to use tidy evaluation functions in your package-functions, _and_ pass R CMD CHECK. For this package, I used the `use_tidyeval()` function to generate [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R). As you can see, it imports and re-exports a lot of rlang functions - only a few of which we have been able to cover here.
-
-To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). 
 
 ## More stuff
 
