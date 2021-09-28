@@ -224,6 +224,8 @@ filter(starwars, hair_color == eye_color)
 
 ------
 
+The Tidyverse would be, as C3PO might say, ["not entirely stable"](https://www.youtube.com/watch?v=13fen80rnnk) if defining a variable with the same name as a data-frame column changed the result. 
+
 ### Summary
 
 Tidy evaluation provides a set of rules for the default evaluation of expressions, and a set of tools that let you change that default whenever you need to. For people who write functions and people who use those functions, tidy evaluation provides a framework that allows both sets of people be confident that a function will do what they expect it to do.
@@ -245,24 +247,7 @@ Selection functions are used to specify columns in a data frame; in the R-help, 
 
 Action functions evaluate to a result; you may or may not be naming the result.
 
-#### Your turn
 
-Let's find the youngest character(s) from each species.
-
-1. Run the code the code in the block below; confirm that we get the result we expect.
-2. Uncomment the commented code, rerun. What happens?
-
-```{r birth-year, exercise=TRUE}
-# birth_year <- c(15, 19) 
-# min(birth_year)
-
-starwars %>%
-  select(name, species, birth_year) %>%
-  group_by(species) %>%
-  filter(birth_year == min(birth_year)) 
-```
-
-The Tidyverse would be, as C3PO might say, ["not entirely stable"](https://www.youtube.com/watch?v=13fen80rnnk) if defining a variable with the same name as a data-frame column changed the result. 
 
 Tidyverse's default is to assume that a varaible name refers to the data frame; if it does not exist there, it will look in the environment.
 
