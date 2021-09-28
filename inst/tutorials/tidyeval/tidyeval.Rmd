@@ -666,7 +666,18 @@ bare_mean_by(starwars, species, height)
 
 ## More stuff
 
-Hopefully, you have been able to use this tutorial to get a sense of tidy evaluation principles and tools. I would encourage you to go through these references by the tidy evaluation architects. You can use these to deepen your knowledge, and introduce yourself to the supporting theory.
+As I said in the introduction, this tutorial is focused on the practical aspects of tidy evaluation: what you need to know to write package-ready functions for Shiny apps or interactive use.
+
+Someday I'd like to write another tidy-evaluation tutorial -- focused on the theory and building-blocks.
+I imagine that it would be based on the [Metaprogramming chapter](https://adv-r.hadley.nz/metaprogramming.html) of Hadley Wickham's Advanced R, and this video he made:
+
+```{r tidy-eval-video-hadley, echo=FALSE}
+embed_url("https://www.youtube.com/watch?v=nERXS3ssntw") %>% 
+  use_align("center")
+```
+
+This is a five-minute video, but it will take me considerably longer to unpack it :)
+
 
 
 
