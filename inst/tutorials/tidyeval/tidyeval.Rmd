@@ -23,7 +23,7 @@ knitr::opts_chunk$set(comment = "#>")
 ### Introduction: second edition (2021)
 
 Since I first put this tutorial together, the Tidyverse team have come out with great presentations that made tidy evaluation easier to understand. 
-My goal in this tutorial is to provide some exercises to build on their presentations.
+My goal in the second edition of this tutorial build on the Tidyverse folks' practical advice.
 
 At rstudio::conf(2019), Jenny Bryan and Lionel Henry gave consecutive talks.
 Jenny set up the problem by asking the question "do you *really need* tidy evaluation?", then showing some cases where you can use straightforward techniques to avoid using it:  
@@ -72,6 +72,11 @@ If you want to read more, these references get into more detail on the Tidyverse
 - [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
 - [Using ggplot2 in packages](https://ggplot2.tidyverse.org/articles/ggplot2-in-packages.html)
 - [Metaprogramming chapter](https://adv-r.hadley.nz/metaprogramming.html) from Hadley Wickham's [Advanced R](https://adv-r.hadley.nz)
+
+In the first edition of this tutorial focused more on the theory and building-blocks of non-standard evaluation, particularly quosures - which I learned ([from an old vignette written by Hadley](https://mran.microsoft.com/snapshot/2017-12-11/web/packages/rlang/vignettes/tidy-evaluation.html)) were [invented by Luke Tierney](https://github.com/wch/r-source/commit/a945ac8e6a82617205442d44a2be3a497d2ac896) in 2000.
+I really am interested in these building-blocks; someday, I hope to write another tutorial where I can do justice to the topic.
+
+In the mean time, I think the practical approach offered here will be more immediately-useful to more folks.
 
 ### Introduction: first edition (2018)
 
@@ -224,90 +229,6 @@ filter(starwars, hair_color == eye_color)
 Tidy evaluation provides a set of rules for the default evaluation of expressions, and a set of tools that let you change that default whenever you need to. For people who write functions and people who use those functions, tidy evaluation provides a framework that allows both sets of people be confident that a function will do what they expect it to do.
 
 In the next few sections, we will discuss the principles and concepts of tidy evaluation, then show how you can use these to call functions that use tidy evaluation (like those in dplyr and ggplot2). Finally, we will discuss how you can write functions that use the tidy evaluation framework.
-
-## Principles and concepts
-
-We can demonstrate tidy evaluation's central idea using strings. Let's say that we want to compose a string to include a name that we specify elsewhere. This warm-up example is lifted from the [dplyr programming vignette](http://dplyr.tidyverse.org/articles/programming.html).
-
-#### Your turn
-
-The goal here is to put a name into a string, then print it.
-
-In the exercise below:
-
-1. Run the code in the block below (you likely suspect that *approach #1* is doomed).
-1. Uncomment the code under *approach #2*, rerun.
-1. Uncomment the code under *approach #3"*, rerun.
-
-```{r warm-up, exercise=TRUE}
-name <- "not Hadley"
-
-## approach #1
-## -----------
-"How do you do, name?"
-
-## approach #2
-## -----------
-# paste0("How do you do, ", name, "?")
-
-## approach #3
-## -----------
-# library("glue")
-# glue("How do you do, {name}?")
-```
-
------
-
-In the first attempt, we cannot evaluate the name because it is *quoted*: the string itself is simply a value. In the second attempt, we build up the string piece-by-piece: `paste0()` evaluates `name` within the larger set of expressions. In the third attempt we use the __glue__ package, which allows us to compose a string by "unquoting": `{name}` is replaced with value of `name`, using the context from which `glue()` is called.
-
-It may be useful to establish some vocabulary terms: symbols, expressions, and quosures.
-
-### Symbols, expressions, and quosures (oh my!)
-
-This may be a good time to recall the [famous quote from _Advanced R_](https://adv-r.hadley.nz/functions.html#all-calls):
-
-> “To understand computations in R, two slogans are helpful:
-> 
-> Everything that exists is an object.
-> Everything that happens is a function call."
-> — John Chambers
-
-The ultimate result of evaluation (tidy or otherwise) is a value. Here, we will go over the types of objects used in tidy evaluation to get to values. Types of values are logicals, doubles, integers, characters, and so on. With a value, everything has been evaluated - there is nothing left to define. Here's an example:
-
-```{r is-droid}
-is_droid <- starwars$species == "Droid" & !is.na(starwars$species)
-
-is_droid
-```
-
-You can send these values as an argument to dplyr's `filter()` function:
-
-```{r is-droid-filter}
-filter(starwars, is_droid)
-```
-
-As you can see, `filter()` is perfectly happy to take this set of values and return the data frame - but that's not why dplyr functions are so useful. We are accustomed to using dplyr like this:
-
-```{r}
-filter(starwars, species == "Droid")
-```
-
-Here, we used an __expression__, `species == "Droid"`; it is then `filter()`'s job to evaluate this expression into values - then use those values to return the corresponding rows of the data frame. It may be useful to think of an expression as a set of instructions.
-
-As we have found out, when dplyr evaluates an expression, its default is to look for variable-names first in the data frame, then in the context from which you called the function. Going forward, we will go through some examples of how you can use tidy evaluation to build expressions that are evaluated according to _your_ specifications.
-
-You can compose expressions using __symbols__; in this case, `species` is a symbol. Let's say you are building a shiny app where you need to call a dplyr function on a data frame that you upload to the app. When you are writing the app, you cannot possibly know the variable names that will be used at runtime. 
-
-It may not be evident how to build expression for dplyr to evaluate. We will see how the tidy evaluation framework lets you build expressions using symbols that you can create at runtime.
-
-If you are already a little familiar with tidy evaluation, you have heard about __quosures__. These are the central feature of tidy evaluation. 
-As Hadley pointed out in an [old vignette](https://mran.microsoft.com/snapshot/2017-12-11/web/packages/rlang/vignettes/tidy-evaluation.html), the quosures were [invented by Luke Tierney in 2000](https://github.com/wch/r-source/commit/a945ac8e6a82617205442d44a2be3a497d2ac896), to allow a formula to access the environment where it was created.
-
-Indeed, a quosure is an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. 
-
-Although quosures are the foundation of tidy evaluation, in many cases we can use syntax to avoid us using quosures directly.
-
-> "Patience, for the Jedi it is time to eat as well." - Yoda
 
 ## Tidy evaluation and Tidyverse 
 
