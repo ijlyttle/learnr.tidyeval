@@ -247,11 +247,44 @@ Selection functions are used to specify columns in a data frame; in the R-help, 
 
 Action functions evaluate to a result; you may or may not be naming the result.
 
+#### Your turn
 
+If you had not read this section, would you think that `dplyr::group_by()` is a selection function or an action function?
 
-Tidyverse's default is to assume that a varaible name refers to the data frame; if it does not exist there, it will look in the environment.
+  - Run the code, as is.
+  - Modify the `group_by()` expression to read `group_by(species = glue("{species}oid"))`.
+    Run the code again. What do you think?
 
+```{r group-by-action, exercise=TRUE}
+library("dplyr")
+library("glue")
+
+starwars %>%
+  group_by(species) %>%
+  count()
+```
+
+Similarly, is `ggplot2::aes()` a selection function or an action function?
+
+  - Run the code, as is.
+  - Modify the `aes()` expression to read `aes(x = height / 2, y = mass)`.
+    Run the code again. What do you think?
+
+```{r aes-action, exercise=TRUE}
+library("ggplot2")
+library("dplyr")
+
+ggplot(starwars, aes(x = height, y = mass)) +
+  geom_point()
+```
+
+---
+
+When working with tidy evaluation, keep in mind if you are working with and selection function or an action function.
+
+Remember, Tidyverse's default is to assume that a varaible name refers to the data frame; if it does not exist there, it will look in the environment.
 Tidy evaluation gives you the tools to be specific about the context of variable-names.
+
 There are two basic models for passing variable-names to functions: 
 
  - **strings**: useful for Shiny apps and web-services, where names are passed around as strings.  
@@ -399,9 +432,6 @@ str_scatterplot <- function(df, str_var_x, str_var_y) {
 
 str_scatterplot(starwars, "height", "mass")
 ```
-
-One quick note: although `ggplot2::aes()` appears to be a selection function, it is actually an action function. 
-You can verify this, above, by specifying `ggplot2::aes(x = .data[[str_var_x]] / 2, y = .data[[str_var_y]])`.
 
 ---
 
