@@ -22,11 +22,11 @@ knitr::opts_chunk$set(comment = "#>")
 
 ### Introduction: second edition (2021)
 
-Since I first put this tutorial together, the Tidyverse team have come out with great presentations that made tidy evaluation easier to understand. 
-My goal in the second edition of this tutorial build on the Tidyverse folks' practical advice.
+Since I first put this tutorial together, the Tidyverse team have come out with great presentations that make tidy evaluation easier to understand. 
+My goal in the second edition of this tutorial is to build on the Tidyverse folks' practical advice.
 
 At rstudio::conf(2019), Jenny Bryan and Lionel Henry gave consecutive talks.
-Jenny set up the problem by asking the question "do you *really need* tidy evaluation?", then showing some cases where you can use straightforward techniques to avoid using it:  
+Jenny set up the problem by asking the question "do you *really need* tidy evaluation?", then showed some cases where you can use straightforward techniques to avoid using it:  
 
 ```{r jb-rs-2019, echo=FALSE}
 embed_url("https://www.youtube.com/watch?v=2BXPLnLMTYo") %>% 
@@ -38,27 +38,26 @@ Spoiler alert -- you need to use tidy evaluation only if:
   - you are writing functions.
   - such a function does not simply pass these arguments **undisturbed** to a Tidyverse function.
 
-Lionel then talked about how to think about tidy evaluation, in case you need to use it:
+Lionel then gave more details on tidy evaluation, in case you *do* need it:
 
 ```{r lh-rs-2019, echo=FALSE}
 embed_url("https://www.youtube.com/watch?v=2-gknoyjL3A") %>% 
   use_align("center")
 ```
 
-More spoilers -- the goal of tidy evaluation is to help you, as a function-writer, be unambiguous about whether a function argument refers to a data frame or the calling environment. For example, in the code:
+More spoilers -- the goal of tidy evaluation is to help you, as a function-writer, be unambiguous about whether a function argument refers to the data frame or to the calling environment. For example, in the code:
 
 ```{r dplyr-select, eval=FALSE}
 library("dplyr")
 
 mpg <- 3
 
-mtcars %>% 
-  select(mpg)
+filter(mtcarts, mpg > 20)
 ```
 
-The `select()` function does not care that `mpg`is defined in the calling environment; it *knows* that `mpg` refers to `mtcars$mpg`. 
+The `filter()` function does not care that `mpg`is defined in the calling environment; it *knows* that `mpg` refers to `mtcars$mpg`. 
 
-At rstudio::conf(2020), Lionel provided an update where he introduced some new syntax that makes Tideval a little bit easier.
+At rstudio::conf(2020), Lionel introduced some new syntax that makes tide evaluation a little bit easier.
 Preview: *embrace the argument*.
 
 ```{r lh-rs-2020, echo=FALSE}
@@ -66,7 +65,8 @@ embed_url("https://www.youtube.com/watch?v=SW_TUkPXSmA") %>%
   use_align("center")
 ```
 
-I think these videos provide an excellent introduction to tidy evaluation. 
+I think these videos provide an excellent introduction to tidy evaluation; this tutorial is built around them. 
+
 If you want to read more, these references get into more detail on the Tidyverse team's current thinking:
 
 - [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
@@ -74,7 +74,7 @@ If you want to read more, these references get into more detail on the Tidyverse
 - [Metaprogramming chapter](https://adv-r.hadley.nz/metaprogramming.html) from Hadley Wickham's [Advanced R](https://adv-r.hadley.nz)
 
 In the first edition of this tutorial focused more on the theory and building-blocks of non-standard evaluation, particularly quosures - which I learned ([from an old vignette written by Hadley](https://mran.microsoft.com/snapshot/2017-12-11/web/packages/rlang/vignettes/tidy-evaluation.html)) were [invented by Luke Tierney](https://github.com/wch/r-source/commit/a945ac8e6a82617205442d44a2be3a497d2ac896) in 2000.
-I really am interested in these building-blocks; someday, I hope to write another tutorial where I can do justice to the topic.
+I find these building-blocks fascinating; someday, I hope to write another tutorial where I can do justice to the topic.
 
 In the mean time, I think the practical approach offered here will be more immediately-useful to more folks.
 
