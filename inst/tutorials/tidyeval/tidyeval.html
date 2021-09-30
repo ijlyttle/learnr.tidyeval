@@ -111,7 +111,7 @@ if (window.hljs) {
 <h2>Introductions</h2>
 <div id="section-introduction-second-edition-2021" class="section level3">
 <h3>Introduction: second edition (2021)</h3>
-<p>Since I first put this tutorial together, the Tidyverse team have come out with great presentations that make tidy evaluation easier to understand. My goal in the second edition of this tutorial is to build on the Tidyverse folks’ practical advice.</p>
+<p>Since I first put this tutorial together, the Tidyverse team have come out with great presentations that make tidy evaluation easier to understand. My goal in the second edition of this tutorial is to build on their practical advice.</p>
 <p>At rstudio::conf(2019), Jenny Bryan and Lionel Henry gave consecutive talks. Jenny set up the problem by asking the question “do you <em>really need</em> tidy evaluation?”, then showed some cases where you can use straightforward techniques to avoid using it:</p>
 <div class="vembedr" align="center">
 <div>
@@ -134,32 +134,32 @@ if (window.hljs) {
 
 mpg &lt;- 3
 
-filter(mtcarts, mpg &gt; 20)</code></pre>
-<p>The <code>filter()</code> function does not care that <code>mpg</code>is defined in the calling environment; it <em>knows</em> that <code>mpg</code> refers to <code>mtcars$mpg</code>.</p>
-<p>At rstudio::conf(2020), Lionel introduced some new syntax that makes tide evaluation a little bit easier. Preview: <em>embrace the argument</em>.</p>
+filter(mtcars, mpg &gt; 20)</code></pre>
+<p>The <code>filter()</code> function does not care that <code>mpg</code> is defined in the calling environment; it <em>knows</em> that <code>mpg</code> refers to <code>mtcars$mpg</code>.</p>
+<p>At rstudio::conf(2020), Lionel introduced some new syntax that makes tidy evaluation a little bit easier. Preview: <em>embrace the argument</em>.</p>
 <div class="vembedr" align="center">
 <div>
 <iframe src="https://www.youtube.com/embed/SW_TUkPXSmA" width="533" height="300" frameborder="0" allowfullscreen=""></iframe>
 </div>
 </div>
-<p>I think these videos provide an excellent introduction to tidy evaluation; this tutorial is built around them.</p>
+<p>I think these videos provide an excellent overview of <em>practical</em> tidy-evaluation; this tutorial is built around them.</p>
 <p>If you want to read more, these references get into more detail on the Tidyverse team’s current thinking:</p>
 <ul>
 <li><a href="http://dplyr.tidyverse.org/articles/programming.html">Programming with dplyr</a></li>
 <li><a href="https://ggplot2.tidyverse.org/articles/ggplot2-in-packages.html">Using ggplot2 in packages</a></li>
 <li><a href="https://adv-r.hadley.nz/metaprogramming.html">Metaprogramming chapter</a> from Hadley Wickham’s <a href="https://adv-r.hadley.nz">Advanced R</a></li>
 </ul>
-<p>In the first edition of this tutorial focused more on the theory and building-blocks of non-standard evaluation, particularly quosures - which I learned (<a href="https://mran.microsoft.com/snapshot/2017-12-11/web/packages/rlang/vignettes/tidy-evaluation.html">from an old vignette written by Hadley</a>) were <a href="https://github.com/wch/r-source/commit/a945ac8e6a82617205442d44a2be3a497d2ac896">invented by Luke Tierney</a> in 2000. I find these building-blocks fascinating; someday, I hope to write another tutorial where I can do justice to the topic.</p>
-<p>In the mean time, I think the practical approach offered here will be more immediately-useful to more folks.</p>
+<p>The first edition of this tutorial focused on the theory and building-blocks of non-standard evaluation. In particular, it focused on quosures - which I learned (<a href="https://mran.microsoft.com/snapshot/2017-12-11/web/packages/rlang/vignettes/tidy-evaluation.html">from an old vignette written by Hadley</a>) were <a href="https://github.com/wch/r-source/commit/a945ac8e6a82617205442d44a2be3a497d2ac896">invented by Luke Tierney</a> in 2000. I find these building-blocks fascinating; someday, I hope to write another tutorial where I can do justice to the topic.</p>
+<p>In the mean time, I think the practical approach offered here, in this edition, will be more immediately useful to more folks.</p>
 </div>
 <div id="section-introduction-first-edition-2018" class="section level3">
 <h3>Introduction: first edition (2018)</h3>
 <p>Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point where I <em>thought</em> I understood it, I <em>seemed</em> to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here’s a receipt:</p>
 <blockquote class="twitter-tweet" data-lang="en">
 <p lang="en" dir="ltr">
-Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, …)
+<p>Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, …)</p>
 </p>
-— Ian Lyttle (<span class="citation">@ijlyttle</span>) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a>
+<p>— Ian Lyttle (<span class="citation">@ijlyttle</span>) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a></p>
 </blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 <p>At first glance, tidy evaluation might seem just as mysterious - a new way to deal with non-standard evaluation. I came to appreciate that tidy evaluation is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones. At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.</p>
@@ -189,6 +189,9 @@ Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%
 <div id="section-your-turn" class="section level4">
 <h4>Your turn</h4>
 <p>Here’s a motivating example from Jenny’s talk:</p>
+<ul>
+<li>Try grouping by any number of columns in the <code>starwars</code> dataset.</li>
+</ul>
 <div class="tutorial-exercise" data-label="pass-the-dots" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>grouped_height &lt;- function(df, ...) {
 
@@ -202,7 +205,6 @@ grouped_height(starwars, homeworld)
 # grouped_height(starwars, homeworld, eye_color)</code></pre>
 <script type="application/json" data-ui-opts="1">{"engine":"r","has_checker":false,"caption":"<span data-i18n=\"text.enginecap\" data-i18n-opts=\"{&quot;engine&quot;:&quot;R&quot;}\">R Code<\/span>"}</script>
 </div>
-<p>Try grouping by any number of columns in the <code>starwars</code> dataset.</p>
 <p>If your function just moves a set of arguments straight into a dplyr (or ggplot2) function, you can just pass the dots and let dplyr do its thing. If you’re anything like me: the less you do, the less chance to mess something up :)</p>
 <p>The limitation is that you can’t touch the <code>...</code> arguments in your function; this usually means that the <code>...</code> can be used only in one place. In this example, you are just passing everything along to <code>dplyr::group_by()</code>. If you want to pass some stuff to <code>dplyr::group_by()</code>, and other stuff to <code>dplyr::summarise()</code>, you’ll need to use some tidy evaluation…</p>
 <p>Note: to use the magrittr pipe (<code>%&gt;%</code>) in a package-function, you can import the operator using <code>usethis::use_pipe()</code>.</p>
@@ -239,7 +241,7 @@ grouped_height(starwars, homeworld)
 #&gt; # … with 5 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;, films &lt;list&gt;,
 #&gt; #   vehicles &lt;list&gt;, starships &lt;list&gt;</code></pre>
 <p>The dplyr code is more concise - you don’t have to repeat the name of the data frame, or specify that you don’t want <code>NA</code> values.</p>
-<p>As well, you may have used dplyr to access databases. If the <code>starwars</code> tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression <code>species == "Droid"</code> into SQL to obtain the same result. tidy evaluation is the framework that dplyr uses to adapt the expression to the situation, so that it <em>just works</em>.</p>
+<p>As well, you may have used dplyr to access databases. If the <code>starwars</code> tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression <code>species == "Droid"</code> into SQL to obtain the same result. Tidy evaluation is the framework that dplyr uses to adapt the expression to the situation, so that it <em>just works</em>.</p>
 </div>
 <div id="section-things-to-keep-in-mind" class="section level3">
 <h3>Things to keep in mind</h3>
@@ -297,13 +299,12 @@ filter(starwars, hair_color == eye_color)</code></pre>
 </div>
 <div id="section-summary" class="section level3">
 <h3>Summary</h3>
-<p>Tidy evaluation provides a set of rules for the default evaluation of expressions, and a set of tools that let you change that default whenever you need to. For people who write functions and people who use those functions, tidy evaluation provides a framework that allows both sets of people be confident that a function will do what they expect it to do.</p>
-<p>In the next few sections, we will discuss the principles and concepts of tidy evaluation, then show how you can use these to call functions that use tidy evaluation (like those in dplyr and ggplot2). Finally, we will discuss how you can write functions that use the tidy evaluation framework.</p>
+<p>Tidy evaluation provides a set of rules for the default evaluation of expressions, and a set of tools that let you change that default whenever you need to. For people who write functions and people who use those functions, tidy evaluation defines a set of rules that lets both sets of people be confident that a function will do what they expect it to do.</p>
 </div>
 </div>
 <div id="section-tidy-evaluation-and-tidyverse" class="section level2">
 <h2>Tidy evaluation and Tidyverse</h2>
-<p>The Tidyverse is all about data frames. The goal of tidy evaluation is to provide the tools to remove any abiguity about if a variable name refers to a column in a data frame or a value in the environment.</p>
+<p>The Tidyverse is all about data frames. The goal of tidy evaluation is to provide the tools to remove any ambiguity about if a variable name refers to a column in a data frame or a value in the environment.</p>
 <p>There are three types of functions that use tidy evaluation:</p>
 <ul>
 <li>selection functions, e.g. <code>dplyr::select()</code>, <code>tidyr::pivot_longer()</code>.</li>
@@ -343,7 +344,7 @@ ggplot(starwars, aes(x = height, y = mass)) +
 </div>
 <hr />
 <p>When working with tidy evaluation, keep in mind if you are working with and selection function or an action function.</p>
-<p>Remember, Tidyverse’s default is to assume that a varaible name refers to the data frame; if it does not exist there, it will look in the environment. Tidy evaluation gives you the tools to be specific about the context of variable-names.</p>
+<p>Remember, Tidyverse’s default is to assume that a variable name refers to the data frame; if it does not exist there, it will look in the environment. Tidy evaluation gives you the tools to specify the context of variable-names.</p>
 <p>There are two basic models for passing variable-names to functions:</p>
 <ul>
 <li><strong>strings</strong>: useful for Shiny apps and web-services, where names are passed around as strings.<br />
@@ -355,14 +356,14 @@ ggplot(starwars, aes(x = height, y = mass)) +
 </div>
 <div id="section-variables-as-strings" class="section level2">
 <h2>Variables as strings</h2>
-<p>In many cases, it is easier to work with functions that offer arguments as strings rahter than as bare-names. This is case for Shiny apps, as well as for web-services. It could be the case for any use-case other than interactive R programming.</p>
+<p>In many cases, it is easier to work with functions that offer arguments as strings rather than as bare-names. This is case for Shiny apps, as well as for web-services.</p>
 <div id="section-selection-functions" class="section level3">
 <h3>Selection functions</h3>
 <p><strong>Selection</strong> functions are functions where we specify columns in an existing data frame. The Tidyverse’s most prominent selection-function is <code>dplyr::select()</code>.</p>
 <div id="section-your-turn-4" class="section level4">
 <h4>Your turn</h4>
 <p>Let’s say we have a Shiny app with a data frame and a multi-select input for the names of columns you wish to select.</p>
-<p>It can be useful to write things up as functions so you can test them outside of Shiny; that’s what we’re doing here. To convert strings to a tidy-select specification, we can use <code>tidyselect::all_of()</code>; if we want a more-tolerant function, we can use <code>tidyselect::any_of()</code>.</p>
+<p>It can be useful to write things up as functions so you can test them outside of Shiny; that’s what we’re doing here. To convert strings to a tidy-select specification, we can use <code>dplyr::all_of()</code>; if we want a more-tolerant function, we can use <code>dplyr::any_of()</code>.</p>
 <p>Run the code below to get a sense of what is going on:</p>
 <ul>
 <li>Try different values for <code>input_vars</code>.</li>
@@ -370,7 +371,7 @@ ggplot(starwars, aes(x = height, y = mass)) +
 </ul>
 <div class="tutorial-exercise" data-label="tidy-select" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>str_select &lt;- function(df, str_vars) {
-  dplyr::select(df, all_of(str_vars))
+  dplyr::select(df, dplyr::all_of(str_vars))
 }
 
 input_vars &lt;- c(&quot;name&quot;, &quot;height&quot;)
@@ -381,7 +382,7 @@ str_select(starwars, input_vars)</code></pre>
 <p>There’s another reason to use the <code>all_of()</code> function:</p>
 <ul>
 <li>Run the following code as-is to find out why. What happened?</li>
-<li>Improve the function code by using <code>all_of()</code>.</li>
+<li>Improve the function code by using <code>dplyr::all_of()</code>.</li>
 </ul>
 <div class="tutorial-exercise" data-label="tidy-select-beware" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>str_select_new &lt;- function(df, name) {
@@ -476,7 +477,7 @@ str_scatterplot(starwars, &quot;height&quot;, &quot;mass&quot;)</code></pre>
 <p>The goal of this function is to group a data frame <strong>by</strong> a variable, then to summarize using the <strong>mean</strong> of another variable:</p>
 <ul>
 <li>Make sure this function works as you expect.</li>
-<li>Change the left-side of the <code>summarise()</code> expression, <code>mean =</code> so that it uses the value of <code>str_mean</code>.</li>
+<li>Change the left-side of the <code>summarise()</code> expression, <code>mean =</code>, to use the value of <code>str_mean</code>.</li>
 <li>Further change the left-side of this expression so that if <code>str_mean</code> is <code>"height"</code> the new variable is named <code>"height_mean"</code>.</li>
 </ul>
 <div class="tutorial-exercise" data-label="naming-str" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
@@ -506,7 +507,7 @@ NULL</code></pre></li>
 <ul>
 <li><a href="https://usethis.r-lib.org/reference/use_pipe.html"><code>usethis::use_pipe()</code></a> to import (and optionally export) the <code>%&gt;%</code> operator.</li>
 <li><a href="https://usethis.r-lib.org/reference/tidyverse.html"><code>usethis::use_tidy_eval()</code></a> to import the rlang “stuff”. Be warned that this will also import a whole lot more “stuff”, the advanced tidy-evaluation functions.</li>
-<li>you’re still on your own for the tideselect functions <code>all_of()</code> and <code>any_of()</code>.</li>
+<li>you’re still on your own for the tidyselect functions <code>all_of()</code> and <code>any_of()</code>.</li>
 </ul></li>
 </ul>
 <p>These will let you use the pronouns, etc., conveniently and keep you legal with <code>R CMD CHECK</code>.</p>
@@ -515,7 +516,7 @@ NULL</code></pre></li>
 <div id="section-variables-as-bare-names" class="section level2">
 <h2>Variables as bare names</h2>
 <p>If you are writing functions for interactive R use, you may want them to have the same look-and-feel as Tidyverse functions. This means referring to data-frame columns using bare names.</p>
-<p>The idea is the same as when we made the string-based functions: we need to be unambiguous about the context of names – data-frame or environment. The techniques are slightly different.</p>
+<p>The idea is the same as for string-based functions: we need to be unambiguous about the context of names – data-frame or environment. The techniques are slightly different.</p>
 <p>Here, we will recreate our functions from the previous section, but use bare names instead of strings.</p>
 <div id="section-selection-functions-1" class="section level3">
 <h3>Selection functions</h3>
@@ -525,12 +526,12 @@ NULL</code></pre></li>
 <p>Let’s say that we want to pass bare-names on to a select function.</p>
 <p>We are going to adapt the string-variable function:</p>
 <ul>
-<li>Let’s try the pass-the-dots strategy:
+<li><p>Let’s try the pass-the-dots strategy:</p>
 <ul>
-<li>in the function signature, use <code>,,,</code> instead of <code>str_vars</code>.</li>
+<li>in the function signature, use <code>...</code> instead of <code>str_vars</code>.</li>
 <li>in <code>dplyr::select()</code>, use <code>...</code> instead of <code>all_of(str_vars)</code>.</li>
 </ul></li>
-<li>Comment and uncomment to try the other function calls. Is it working as you expect?</li>
+<li><p>Comment and uncomment to try the other function calls. Is it working as you expect?</p></li>
 </ul>
 <div class="tutorial-exercise" data-label="tidy-select-bare" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
 <pre class="text"><code>bare_select &lt;- function(df, str_vars) {
@@ -547,12 +548,12 @@ bare_select(starwars, height, mass)
 <p>There is another way to do much the same thing, but will work if you have more than one place to send your arguments: “embrace the arguments”. Instead of invoking the dots in the <code>dplyr::select()</code> function, you wrap a named argument in <code>{{}}</code>, e.g. <code>{{ vars }}</code>.</p>
 <p>Let’s adapt the string-variable function:</p>
 <ul>
-<li>This time using the “embrace the arguments” technique:
+<li><p>This time using the “embrace the arguments” technique:</p>
 <ul>
 <li>in the function signature, replace <code>str_vars</code> with <code>vars</code>.</li>
 <li>in the <code>dplyr::select()</code> function, replace <code>all_of(str_vars)</code> with <code>{{ vars }}</code>.</li>
 </ul></li>
-<li>Comment and uncomment to try the other function calls.
+<li><p>Comment and uncomment to try the other function calls.</p>
 <ul>
 <li>is it working as you expect?</li>
 <li>why does the last one not work?</li>
@@ -573,7 +574,7 @@ bare_select(starwars, height)
 <script type="application/json" data-ui-opts="1">{"engine":"r","has_checker":false,"caption":"<span data-i18n=\"text.enginecap\" data-i18n-opts=\"{&quot;engine&quot;:&quot;R&quot;}\">R Code<\/span>"}</script>
 </div>
 <hr />
-<p>The <code>{{}}</code> operator (the Tidyverse team calls it “curly curly”) is interpreted in tidy evaluation as:</p>
+<p>The <code>{{}}</code> operator (the Tidyverse team calls it “curly curly”) is interpreted by Tidyverse functions as:</p>
 <ul>
 <li>do not evaluate the contents just yet.</li>
 <li>when you <em>do</em> evaluate the contents, interpret them in the context of the data-frame.</li>
@@ -591,7 +592,7 @@ bare_select(starwars, height)
 </ul>
 <div id="section-your-turn-10" class="section level4">
 <h4>Your turn</h4>
-<p>Let’s start again with the string-varaible function, and change it to a bare-name function:</p>
+<p>Let’s start again with the string-variable function, and change it to a bare-name function:</p>
 <ul>
 <li>in the function signature, change <code>str_var</code> to <code>var</code>.</li>
 <li>in the <code>dplyr::filter()</code> call, change <code>.data[[str_var]]</code> to <code>{{ var }}</code>.</li>
@@ -684,8 +685,7 @@ bare_mean_by(starwars, species, height)</code></pre>
 <iframe src="https://www.youtube.com/embed/nERXS3ssntw" width="533" height="300" frameborder="0" allowfullscreen=""></iframe>
 </div>
 </div>
-<p>This is a five-minute video, but it will take me considerably longer to unpack it :)</p>
-
+This is a five-minute video, but it will take me considerably longer to unpack it :) 
 <script type="application/shiny-prerendered" data-context="server-start">
 library("glue")
 library("dplyr")
@@ -924,7 +924,7 @@ learnr:::store_exercise_cache(structure(list(global_setup = structure(c("library
 "library(\"dplyr\")", "library(\"learnr\")", "library(\"vembedr\")", 
 "library(\"learnr.tidyeval\")", "", "options(width = 80)", "knitr::opts_chunk$set(comment = \"#>\")"
 ), chunk_opts = list(label = "setup", include = FALSE)), setup = NULL, 
-    chunks = list(list(label = "tidy-select", code = "str_select <- function(df, str_vars) {\n  dplyr::select(df, all_of(str_vars))\n}\n\ninput_vars <- c(\"name\", \"height\")\n\nstr_select(starwars, input_vars)", 
+    chunks = list(list(label = "tidy-select", code = "str_select <- function(df, str_vars) {\n  dplyr::select(df, dplyr::all_of(str_vars))\n}\n\ninput_vars <- c(\"name\", \"height\")\n\nstr_select(starwars, input_vars)", 
         opts = list(label = "\"tidy-select\"", exercise = "TRUE"), 
         engine = "r")), code_check = NULL, error_check = NULL, 
     check = NULL, solution = NULL, options = list(eval = FALSE, 
@@ -944,7 +944,7 @@ learnr:::store_exercise_cache(structure(list(global_setup = structure(c("library
         message = TRUE, render = NULL, ref.label = NULL, child = NULL, 
         engine = "r", split = FALSE, include = TRUE, purl = TRUE, 
         max.print = 1000, label = "tidy-select", exercise = TRUE, 
-        code = c("str_select <- function(df, str_vars) {", "  dplyr::select(df, all_of(str_vars))", 
+        code = c("str_select <- function(df, str_vars) {", "  dplyr::select(df, dplyr::all_of(str_vars))", 
         "}", "", "input_vars <- c(\"name\", \"height\")", "", 
         "str_select(starwars, input_vars)"), out.width.px = 624, 
         out.height.px = 384, params.src = "tidy-select, exercise=TRUE", 
