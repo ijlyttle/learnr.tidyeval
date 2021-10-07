@@ -343,7 +343,7 @@ ggplot(starwars, aes(x = height, y = mass)) +
 <script type="application/json" data-ui-opts="1">{"engine":"r","has_checker":false,"caption":"<span data-i18n=\"text.enginecap\" data-i18n-opts=\"{&quot;engine&quot;:&quot;R&quot;}\">R Code<\/span>"}</script>
 </div>
 <hr />
-<p>When working with tidy evaluation, keep in mind if you are working with and selection function or an action function.</p>
+<p>When working with tidy evaluation, it’s important to distinguish between selection-functions and action-functions.</p>
 <p>Remember, Tidyverse’s default is to assume that a variable name refers to the data frame; if it does not exist there, it will look in the environment. Tidy evaluation gives you the tools to specify the context of variable-names.</p>
 <p>There are two basic models for passing variable-names to functions:</p>
 <ul>

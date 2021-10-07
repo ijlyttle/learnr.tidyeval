@@ -305,7 +305,7 @@ ggplot(starwars, aes(x = height, y = mass)) +
 
 ------------------------------------------------------------------------
 
-When working with tidy evaluation, keep in mind if you are working with and selection function or an action function.
+When working with tidy evaluation, it's important to distinguish between selection-functions and action-functions.
 
 Remember, Tidyverse's default is to assume that a variable name refers to the data frame; if it does not exist there, it will look in the environment.
 Tidy evaluation gives you the tools to specify the context of variable-names.
@@ -534,7 +534,8 @@ We are going to adapt the string-variable function:
     -   in the function signature, use `...` instead of `str_vars`.
     -   in `dplyr::select()`, use `...` instead of `all_of(str_vars)`.
 
--   Comment and uncomment to try the other function calls. Is it working as you expect?
+-   Comment and uncomment to try the other function calls.
+    Is it working as you expect?
 
 ```{r tidy-select-bare, exercise=TRUE}
 bare_select <- function(df, str_vars) {
