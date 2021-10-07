@@ -1,6 +1,6 @@
 ---
-title: Tidyeval
-author: "Ian Lyttle, adapted from material by Lionel Henry and Hadley Wickham"
+title: Tidy Evaluation
+author: "Ian Lyttle, adapted from material by Lionel Henry, Hadley Wickham, and Jenny Bryan"
 output: 
   learnr::tutorial:
     df_print: tibble
@@ -11,35 +11,161 @@ runtime: shiny_prerendered
 library("glue")
 library("dplyr")
 library("learnr")
+library("vembedr")
 library("learnr.tidyeval")
 
 options(width = 80)
 knitr::opts_chunk$set(comment = "#>")
 ```
 
-## Introduction
+## Introductions
 
-Confession: for years, I have struggled to wrap my head around non-standard evaluation. I would sit down over a weekend and get myself to the point where I _thought_ I understood it, I _seemed_ to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work. Here's a receipt:
+### Introduction: second edition (2021)
 
-<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, ...)</p>&mdash; Ian Lyttle (@ijlyttle) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a></blockquote>
+Since I first put this tutorial together, the Tidyverse team have come out with great presentations that make tidy evaluation easier to understand.
+My goal in the second edition of this tutorial is to build on their practical advice.
+
+At rstudio::conf(2019), Jenny Bryan and Lionel Henry gave consecutive talks.
+Jenny set up the problem by asking the question "do you *really need* tidy evaluation?", then showed some cases where you can use straightforward techniques to avoid using it:
+
+```{r jb-rs-2019, echo=FALSE}
+embed_url("https://www.youtube.com/watch?v=2BXPLnLMTYo") %>% 
+  use_align("center")
+```
+
+Spoiler alert -- you need to use tidy evaluation only if:
+
+-   you are writing functions.
+-   such a function does not simply pass these arguments **undisturbed** to a Tidyverse function.
+
+Lionel then gave more details on tidy evaluation, in case you *do* need it:
+
+```{r lh-rs-2019, echo=FALSE}
+embed_url("https://www.youtube.com/watch?v=2-gknoyjL3A") %>% 
+  use_align("center")
+```
+
+More spoilers -- the goal of tidy evaluation is to help you, as a function-writer, be unambiguous about whether a function argument refers to the data frame or to the calling environment.
+For example, in the code:
+
+```{r dplyr-select, eval=FALSE}
+library("dplyr")
+
+mpg <- 3
+
+filter(mtcars, mpg > 20)
+```
+
+The `filter()` function does not care that `mpg` is defined in the calling environment; it *knows* that `mpg` refers to `mtcars$mpg`.
+
+At rstudio::conf(2020), Lionel introduced some new syntax that makes tidy evaluation a little bit easier.
+Preview: *embrace the argument*.
+
+```{r lh-rs-2020, echo=FALSE}
+embed_url("https://www.youtube.com/watch?v=SW_TUkPXSmA") %>% 
+  use_align("center")
+```
+
+I think these videos provide an excellent overview of *practical* tidy-evaluation; this tutorial is built around them.
+
+If you want to read more, these references get into more detail on the Tidyverse team's current thinking:
+
+-   [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
+-   [Using ggplot2 in packages](https://ggplot2.tidyverse.org/articles/ggplot2-in-packages.html)
+-   [Metaprogramming chapter](https://adv-r.hadley.nz/metaprogramming.html) from Hadley Wickham's [Advanced R](https://adv-r.hadley.nz)
+
+The first edition of this tutorial focused on the theory and building-blocks of non-standard evaluation.
+In particular, it focused on quosures - which I learned ([from an old vignette written by Hadley](https://mran.microsoft.com/snapshot/2017-12-11/web/packages/rlang/vignettes/tidy-evaluation.html)) were [invented by Luke Tierney](https://github.com/wch/r-source/commit/a945ac8e6a82617205442d44a2be3a497d2ac896) in 2000.
+I find these building-blocks fascinating; someday, I hope to write another tutorial where I can do justice to the topic.
+
+In the mean time, I think the practical approach offered here, in this edition, will be more immediately useful to more folks.
+
+### Introduction: first edition (2018)
+
+Confession: for years, I have struggled to wrap my head around non-standard evaluation.
+I would sit down over a weekend and get myself to the point where I *thought* I understood it, I *seemed* to be able to write code to use it effectively, then a month later I would have no idea of what I had written or why it seemed to work.
+Here's a receipt:
+
+<blockquote class="twitter-tweet" data-lang="en">
+
+<p lang="en" dir="ltr">
+
+Personal <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">\#rstats</a> resolution: 2016 will be the year I wrap my head around non-standard evaluation (just like 2015, 2014, 2013, ...)
+
+</p>
+
+--- Ian Lyttle (@ijlyttle) <a href="https://twitter.com/ijlyttle/status/682678320039899141?ref_src=twsrc%5Etfw">December 31, 2015</a>
+
+</blockquote>
+
+```{=html}
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+```
+At first glance, tidy evaluation might seem just as mysterious - a new way to deal with non-standard evaluation.
+I came to appreciate that tidy evaluation is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones.
+At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.
 
-At first glance, tidyeval might seem just as mysterious - a new way to deal with non-standard evaluation. I came to appreciate that tidyeval is built on a series of principles; as I came to understand (at least some of) these principles, it became easier for me to retrace my steps and to take new ones. At this point I think I understand the basic principles such that, at the risk of telling you more than I know, I can discuss those basics here.
+Of course, none of this material is possible without the work done by Lionel Henry and Hadley Wickham, who developed the tidy evaluation framework.
+Indeed, the examples shown here are adapted from their sources:
 
-Of course, none of this material is possible without the work done by Lionel Henry and Hadley Wickham, who developed the tidyeval framework. Indeed, the examples shown here are adapted from their sources:
-
-- [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
-- [Tidy evaluation](https://tidyeval.tidyverse.org/)
-- [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
-- [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
+-   [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
+-   [Tidy evaluation](https://tidyeval.tidyverse.org/)
+-   [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
+-   [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
 
 I am particularly impressed with the "Erratum" article, as it explains very well the factors that went into a design choice, as well as the factors that went into the decision to modify that choice.
 
-The goal of this tutorial is to make it easier for you to tackle these references. As you make your way through this, please keep in mind that I am an imperfect interpreter of tidyeval principles. I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will rectify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)). 
+The goal of this tutorial is to make it easier for you to tackle these references.
+As you make your way through this, please keep in mind that I am an imperfect interpreter of tidy evaluation principles.
+I will do my best to convey what I understand; any shortcomings are my sole responsibility, which I will rectify as they become apparent ([issue page](https://github.com/ijlyttle/learnr.tidyeval/issues)).
 
-This tutorial is produced using the [__learnr__ package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactive exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
+This tutorial is produced using the [**learnr** package](https://rstudio.github.io/learnr/), which lets you produce a document that includes interactive exercises, and can be published to RStudio's [shinyapps service](http://www.shinyapps.io/).
 
-## What motivates tidyeval?
+## Easy off-ramps
+
+Do you *need* tidy evaluation?
+
+In her rstudio::conf(2019) presentation, [Jenny Bryan tackles this topic](https://www.youtube.com/watch?v=2-gknoyjL3A) much more effectively than I could ever hope to.
+
+In essence:
+
+-   If you are not writing functions, worry not!
+
+-   If you are not writing functions that use tidy evaluation - worry not!
+
+-   If you can pass the arguments **undisturbed**, pass the dots!
+
+Let's explore this pass-the-dots idea.
+
+#### Your turn
+
+Here's a motivating example from Jenny's talk:
+
+-   Try grouping by any number of columns in the `starwars` dataset.
+
+```{r pass-the-dots, exercise=TRUE}
+grouped_height <- function(df, ...) {
+
+  # if this is a package function, be sure to import the `%>%` operator
+  df %>%
+    dplyr::group_by(...) %>%
+    dplyr::summarise(avg_height = mean(height, na.rm = TRUE))
+}
+
+grouped_height(starwars, homeworld)
+# grouped_height(starwars, homeworld, eye_color)
+```
+
+If your function just moves a set of arguments straight into a dplyr (or ggplot2) function, you can just pass the dots and let dplyr do its thing.
+If you're anything like me: the less you do, the less chance to mess something up :)
+
+The limitation is that you can't touch the `...` arguments in your function; this usually means that the `...` can be used only in one place.
+In this example, you are just passing everything along to `dplyr::group_by()`.
+If you want to pass some stuff to `dplyr::group_by()`, and other stuff to `dplyr::summarise()`, you'll need to use some tidy evaluation...
+
+Note: to use the magrittr pipe (`%>%`) in a package-function, you can import the operator using `usethis::use_pipe()`.
+
+## What motivates tidy evaluation?
 
 ### Advantages
 
@@ -49,7 +175,7 @@ You are probably used to **dplyr** code that looks like this:
 filter(starwars, species == "Droid")
 ```
 
-This does the same thing as this base R code: 
+This does the same thing as this base R code:
 
 ```{r}
 starwars[starwars$species == "Droid" &  !is.na(starwars$species), ]
@@ -57,24 +183,29 @@ starwars[starwars$species == "Droid" &  !is.na(starwars$species), ]
 
 The dplyr code is more concise - you don't have to repeat the name of the data frame, or specify that you don't want `NA` values.
 
-As well, you may have used dplyr to access databases. If the `starwars` tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression `species == "Droid"` into SQL to obtain the same result. Tidyeval is the framework that dplyr uses to adapt the expression to the situation, so that it "just works".
+As well, you may have used dplyr to access databases.
+If the `starwars` tibble were stored on a remote database, rather than in a local data-frame, dplyr would translate the expression `species == "Droid"` into SQL to obtain the same result.
+Tidy evaluation is the framework that dplyr uses to adapt the expression to the situation, so that it *just works*.
 
 ### Things to keep in mind
 
-As [Jar Jar discovered](https://youtu.be/qL1fBDQXSy8?t=1m40s), there is no such thing as a free lunch. There are a couple things to be mindful of.
+As [Jar Jar discovered](https://youtu.be/qL1fBDQXSy8?t=1m40s), there is no such thing as a free lunch.
+There are a couple things to be mindful of.
 
 #### Referential transparency
 
-Most arguments to dplyr functions are not [__referentially transparent__](https://en.wikipedia.org/wiki/Referential_transparency). You can't replace an argument with a seemingly-equivalent argument that you have defined elsewhere.
+Most arguments to dplyr functions are not [**referentially transparent**](https://en.wikipedia.org/wiki/Referential_transparency).
+You can't replace an argument with a seemingly-equivalent argument that you have defined elsewhere.
 
-##### Your turn
+#### Your turn
 
-Let's look again at our earlier example. In the code-block below:
+Let's look again at our earlier example.
+In the code-block below:
 
-1. Run the code as-is.
-1. Change the expression in the `filter()` to `my_var == "Droid"`
-1. Uncomment the expression `my_var <- species`, rerun. What happens?
-1. Change this expression to `my_var <- "species"`, rerun. What happens?
+1.  Run the code as-is.
+2.  Change the expression in the `filter()` to `my_var == "Droid"`
+3.  Uncomment the expression `my_var <- species`, rerun. What happens?
+4.  Change this expression to `my_var <- "species"`, rerun. What happens?
 
 ```{r starwars-my_var, exercise=TRUE}
 # my_var <- species
@@ -83,11 +214,12 @@ filter(starwars, species == "Droid")
 
 As you see, neither of these substitutions works - so it is not immediately obvious how to call dplyr functions without hard-coding everything.
 
--------
+------------------------------------------------------------------------
 
 #### Ambiguity
 
-As well, dplyr evaluates expressions ambiguously. As we will see, the code `filter(df, x == y)` can be interpreted differently depending on the data and the context:
+As well, dplyr evaluates expressions ambiguously.
+As we will see, the code `filter(df, x == y)` can be interpreted differently depending on the data and the context:
 
 ```{r eval=FALSE}
 df[df$x == df$y, ]
@@ -96,18 +228,19 @@ df[x == df$y, ]
 df[x == y, ]
 ```
 
-If the "wrong" thing happens when you are working interactively, you can see that there is a problem and correct it. If the "wrong" thing happens when you are calling a function (from a function, from a package, ...), it can be nearly impossible to figure out what went wrong, let alone fix it.
+If the "wrong" thing happens when you are working interactively, you can see that there is a problem and correct it.
+If the "wrong" thing happens when you are calling a function (from a function, from a package, ...), it can be nearly impossible to figure out what went wrong, let alone fix it.
 
-##### Your turn
+#### Your turn
 
 Let's say we want to look at the Star Wars characters, comparing eye-color and hair-color.
 
 In the code-block below:
 
-1. Run the code as-is.
-1. Uncomment the `eye_color <- "black"` line, rerun.
-1. Uncomment the `my_color <- "black"` line, change the filter expression to `hair_color == my_color`, rerun.
-1. Fiddle around with other variables and filter expressions.
+1.  Run the code as-is.
+2.  Uncomment the `eye_color <- "black"` line, rerun.
+3.  Uncomment the `my_color <- "black"` line, change the filter expression to `hair_color == my_color`, rerun.
+4.  Fiddle around with other variables and filter expressions.
 
 What can you tell about the rules that `dplyr::filter()` uses to evaluate an expression?
 
@@ -117,649 +250,452 @@ What can you tell about the rules that `dplyr::filter()` uses to evaluate an exp
 filter(starwars, hair_color == eye_color)
 ```
 
-------
+------------------------------------------------------------------------
+
+The Tidyverse would be, as C3PO might say, ["not entirely stable"](https://www.youtube.com/watch?v=13fen80rnnk) if defining a variable with the same name as a data-frame column changed the result.
 
 ### Summary
 
-Tidyeval provides a set of rules for the default evaluation of expressions, and a set of tools that let you change that default whenever you need to. For people who write functions and people who use those functions, tidyeval provides a framework that allows both sets of people be confident that a function will do what they expect it to do.
+Tidy evaluation provides a set of rules for the default evaluation of expressions, and a set of tools that let you change that default whenever you need to.
+For people who write functions and people who use those functions, tidy evaluation defines a set of rules that lets both sets of people be confident that a function will do what they expect it to do.
 
-In the next few sections, we will discuss the principles and concepts of tidyeval, then show how you can use these to call functions that use tidyeval (like those in dplyr). Finally, we will discuss how you can write functions that use the tidyeval framework.
+## Tidy evaluation and Tidyverse
 
-## Principles and concepts
+The Tidyverse is all about data frames.
+The goal of tidy evaluation is to provide the tools to remove any ambiguity about if a variable name refers to a column in a data frame or a value in the environment.
 
-We can demonstrate tidyeval's central idea using strings. Let's say that we want to compose a string to include a name that we specify elsewhere. This warm-up example is lifted from the [dplyr programming vignette](http://dplyr.tidyverse.org/articles/programming.html).
+There are three types of functions that use tidy evaluation:
 
-##### Your turn
+-   selection functions, e.g. `dplyr::select()`, `tidyr::pivot_longer()`.
+-   action functions, e.g. `dplyr::filter()`, `ggplot2::aes()`.
+-   action functions with naming, e.g. `dplyr::mutate()`, `dplyr::summarize()`, `dplyr::group_by()`.
 
-The goal here is to put a name into a string, then print it.
+Selection functions are used to specify columns in a data frame; in the R-help, you'll see a reference to [`<tidy-select>`](https://dplyr.tidyverse.org/reference/dplyr_tidy_select.html).
 
-In the exercise below:
-
-1. Run the code in the block below (you likely suspect that "approach #1" is doomed).
-1. Uncomment the code under "approach #2", rerun.
-1. Uncomment the code under "approach #3", rerun.
-
-```{r warm-up, exercise=TRUE}
-name <- "not Hadley"
-
-## approach #1
-## -----------
-"How do you do, name?"
-
-## approach #2
-## -----------
-# paste0("How do you do, ", name, "?")
-
-## approach #3
-## -----------
-# library("glue")
-# glue("How do you do, {name}?")
-```
-
------
-
-In the first attempt, we cannot evaluate the name because it is "quoted": the string itself is simply a value. In the second attempt, we build up the string piece-by-piece: `paste0()` evaluates `name` within the larger set of expressions. In the third attempt we use the __glue__ package, which allows us to compose a string by "unquoting": `{name}` is replaced with value of `name`, using the context from which `glue()` is called.
-
-It may be useful to establish some vocabulary terms: symbols, expressions, and quosures.
-
-### Symbols, expressions, and quosures (oh my!)
-
-This may be a good time to recall the [famous quote from _Advanced R_](https://adv-r.hadley.nz/functions.html#all-calls):
-
-> “To understand computations in R, two slogans are helpful:
-> 
-> Everything that exists is an object.
-> Everything that happens is a function call."
-> — John Chambers
-
-The ultimate result of evaluation (tidy or otherwise) is a value. Here, we will go over the types of objects used in tidyeval to get to values. Types of values are logicals, doubles, integers, characters, and so on. With a value, everything has been evaluated - there is nothing left to define. Here's an example:
-
-```{r}
-is_droid <- starwars$species == "Droid" & !is.na(starwars$species)
-
-is_droid
-```
-
-You can send these values as an argument to dplyr's `filter()` function:
-
-```{r}
-filter(starwars, is_droid)
-```
-
-As you can see, `filter()` is perfectly happy to take this set of values and return the data frame - but that's not why dplyr functions are so useful. We are accustomed to using dplyr like this:
-
-```{r}
-filter(starwars, species == "Droid")
-```
-
-Here, we used an __expression__, `species == "Droid"`; it is then `filter()`'s job to evaluate this expression into values - then use those values to return the corresponding rows of the data frame. It may be useful to think of an expression as a set of instructions.
-
-As we have found out, when dplyr evaluates an expression, its default is to look for variable-names first in the data frame, then in the context from which you called the function. Going forward, we will go through some examples of how you can use tidyeval to build expressions that are evaluated according to _your_ specifications.
-
-You can compose expressions using __symbols__; in this case, `species` is a symbol. Let's say you are building a shiny app where you need to call a dplyr function on a data frame that you upload to the app. When you are writing the app, you cannot possibly know the variable names that will be used at runtime. 
-
-It may not be evident how to build expression for dplyr to evaluate. We will see how the tidyeval framework lets you build expressions using symbols that you can create at runtime.
-
-If you are already a little familiar with tidyeval, you have heard about __quosures__. These are the central feature of tidyeval. For now, it may be useful to think about a quosure as an expression that carries along with it the context where it was created. If we think of an expression as a set of instructions, we can think of a quosure as a set of instructions bundled with a set of materials. We will look at quosures more explicitly later in this tutorial.
-
-> "Patience, for the Jedi it is time to eat as well." - Yoda
-
-## Tidyeval and tidyverse 
-
-One of the mantras of the tidyverse is "data first!" 
-
-Tidyverse functions are designed so that a data-frame is the first argument wherever feasible; this makes it easy to use the pipe operator. 
-
-##### Your turn
-
-Let's find the youngest character(s) from each species.
-
-1. Run the code the code in the block below; confirm that we get the result we expect.
-2. Uncomment the expression `birth_year <- c(15, 19)`, rerun. What happens?
-
-```{r birth-year, exercise=TRUE}
-# birth_year <- c(15, 19) 
-
-starwars %>%
-  select(name, species, birth_year) %>%
-  group_by(species) %>%
-  filter(birth_year == min(birth_year, na.rm = TRUE)) 
-```
-
-The tidyverse would be, as C3PO might say, "not entirely stable" if defining a variable with the same name as a data-frame column changed the result. 
-
-----
-
-Perhaps we can interpret "data first!" another way: when a tidyverse function evaluates an expression, it looks in the _data first_, then in the calling context. We can work confidently with tidyverse functions because they behave consistently according to a convention.
-
-In the next sections, we will use tidyeval with dplyr functions: first calling them directly, then writing functions that call dplyr functions. 
-
-## Using functions that use tidyeval
-
-### Motivation
-
-The next couple of sections will talk about how we can use, and even write, functions that use tidyeval. As we make our way through these sections, I'd like to keep a motivating case in mind, writing __shiny__ apps. 
-
-In a shiny app, let's say you want your user to be able to specify a data frame, filter on some condition, then make a scatterplot, letting your user specify your axes. To keep the example a little simpler, let's say our goal is to be able to specify a data frame, then a filtering condition.
-
-When I write a shiny app, I want to be able to divide my code up into two "piles":
-
-1. Code that does stuff outside of shiny, that I can run interactively and test - you know, just [regular R code](https://tenor.com/view/rcode-typing-gif-11364811)
-2. Code to adapt the code from group (1.) into shiny - I want this code to be as "light" as possible
-
-I'll refer back to this motivating example as much as I can, as we make our way through the next couple of sections. 
-
----
-
-In tidyeval, we compose expressions. In my (albeit limited) experience, I have come across three types of expressions; an expression can have more than one type:
-
-- **"valuey"** expressions: these evaluate to a set of values, e.g. `dplyr::filter()`.
-- **"selectly"** expressions: these evaluate to identify columns in a data frame, e.g. `dplyr::select()`.
-- **"namey"** expressions: these can be "valuey" expressions that have a name-assignment, e.g. `dplyr::mutate()`
-
-### "valuey" expressions
-
-As you saw earlier, the `dplyr::filter()` function takes a series of expressions that it evaluates to `TRUE` or `FALSE` to determine which rows to return. 
-
-Let's consider a version of our shiny app where we consider the `starwars` data frame, and we want to specify a single filtering condition, testing for equality. In this case, we will need
-
-- an input that specifies the variable for the filter - this will be a character string
-- an input that specifies the value - this will be a numeric value
-
-To simplify further, we will filter on `birth_year`, we will vary only the value. Let's get this working for "just regular R", by specifying a value for the input, and running the code that we would then put into part of a shiny app:
-
-##### Your turn
-
-Run the following code block:
-
-```{r filter-input-value, exercise=TRUE}
-input_value <- 19
-
-filter(starwars, birth_year == input_value)
-```
-
-So far so good - `filter()` looks for `birth_year` in the data and finds it, then looks for `input_value` as a variable in the data, does not find it, then finds `input_value` as a variable in the context.
-
----
-
-You will need to use a little imagination because this is a (very) contrived example. Let's imagine that we don't know that `starwars` does not have a column named `input_value`. We want to make this evaluation "airtight", we want to make sure that we use `input_value` from our context.
-
-##### Your turn
-
-Let's look back at our string example; run the following code block:
-
-```{r glue-input-value, exercise=TRUE}
-library("glue")
-
-input_value <- 19
-
-glue("We want rows where the birth_year is {input_value}.")
-```
-
-Recall that we are composing a string by unquoting: `{input_value}` is replaced with *value* of `name`, using the context from which `glue()` is called. It takes the quoted expression and evaluates it immediately.
-
----
-
-Instead of composing strings, we want to compose expressions; the tidyeval framework provides an __unquoting__ function.
-The `!!` operator acts on expressions in tidyeval like the `{}` acts on strings in `glue()`: it evaluates its contents and incorporates the result into the expression.
-
-##### Your turn
-
-1. Run the following code using the starting state: `input_value <- 19`, and `birth_year == input_value`. This should return observations for Luke and Leia.
-2. Change these expressions to `birth_year <- 19` and `birth_year == birth_year`, then run the code again. What happens? Why?
-3. Change the second expression to `birth_year == !!birth_year`, then run the code again. Feel better?
-
-```{r filter-uq-value, exercise=TRUE}
-input_value <- 19 
-
-filter(starwars, birth_year == input_value) 
-```
-
-The effect of the `!!` operator is to say, "Evaluate me now using my context!!". This can be an effective tool to bring clarity to our code. It's a way to specify, both to the computer and to anyone reading it, that this part of the expression will be evaluated using the context, *not* the data.
-
----
-
-We can take a peek at what will happen, "seeing" the function call from dplyr's perspective, using the `quo()` function as a debugging tool. 
-
-##### Your turn
-
-Here, we are doing just as above, but instead of looking at the result, have a look at the output of the `quo()` call:
-
-1. Run the following code using the starting state: `input_value <- 19`, and `birth_year == input_value`.
-2. Change these expressions to `birth_year <- 19` and `birth_year == birth_year`, then run the code again. 
-3. Change the second expression to `birth_year == !!birth_year`, then run the code again. 
-
-```{r filter-uq-value-quo, exercise=TRUE}
-input_value <- 19 
-
-quo(
-  filter(starwars, birth_year == input_value)
-)
-```
-
----
-
-(For extra credit, hit the "Start Over" button in the code block, change `birth_year == input_value` to `birth_year == !!input_value`, have a think about what you expect to see, then run the code.)
-
-We see this word "quosure" again. I find it useful to think about a quosure as an expression (set of instructions) with an attached context (set of materials). We see the instructions: e.g. `^filter(starwars, birth_year == 19)`, and we are given an indication of the materials: something like `0x7fca3107a468` (a memory location for an environment). For now, we can use the `quo()` function to verify that our instructions are what we expect.
-
------
-
-We have worked out how to specify a value unambiguously. Our next step is to specify the data frame and the column to filter. 
-
-Symbols can be used to compose expressions. The tidyeval framework provides a function to convert strings into symbols, `sym()`:
-
-```{r}
-str(
-  sym("foo")  
-)
-```
-
-We can use the `sym()` function to help build the left-hand-side of our expression.
-
-##### Your turn
-
-This code does not work... yet.
-
-1. Run the code-block as-is. Use the output of `quo()` to "see" what dplyr will see when it evaluates the expression.
-
-2. It looks like the expression `sym(input_name)` has not yet been evaluated. Apply an operator to `sym(input_name)` that will **evaluate it immediately**. 
-
-<details>
- <summary>**Hint:**</summary>
- <p>`!!`</p>
-</details>
-
-For extra credit, remove the `quo()` to make sure it still returns the data we expect.
-
-```{r filter-sym, exercise=TRUE}
-data <- starwars
-
-input_name <- "birth_year"
-input_value <- 19
-
-quo(
-  filter(data, sym(input_name) == !!input_value)
-)
-```
-
-Notice that we don't have to do anything special with the first argument to `filter()`, the data frame. We can replace this data frame with an equivalent data frame and get the same result; `filter()` is __referentially transparent__ for this argument.
-
------
-
-There is one more thing we can do to make things airtight.
-
-##### Your turn
-
-Consider this bit of mischief:
-
-1. Run this code as is - what happens?
-2. Uncomment the expression `parsec <- 12`, rerun the code. What happens?
-
-How is what happens in (1.) different from what happens in (2.)? 
-
-```{r filter-mischeif, exercise=TRUE}
-data <- starwars
-
-input_name <- "parsec"
-input_value <- 19
-
-# parsec <- 12
-
-filter(data, !!sym(input_name) == !!input_value)
-```
-
-In (1.) we get an error-message that `parsec` is not found. Clearly, it is not a column in the data-frame, and it is not in our context. 
-
-In (2.), the variable `parsec` *is* found in our context - dplyr evaluates `parsec` to `12`, there are no rows where `12 == 19`, so no rows are returned.
-
----
-
-The tidyeval framework has a tool to make sure that we look in _only_ the data for a variable, a pronoun named `.data`. You can use this to compose expressions that throw an error if variables are not found in the data.
-
-Here are some examples:
-
-##### Your turn
-
-1. Run the code as-is to confirm that the `.data` pronoun works.
-2. Change the expression from `.data$birth_year` to `.data[["birth_year"]]`, rerun - just to make sure that we can use `[[` notation as well as `$` notation.
-3. Change the name of the data argument from `starwars` to `mtcars`, rerun to see what happens when a specified variable *does not* appear in the given data frame.
-
-```{r data-pronoun, exercise=TRUE}
-filter(starwars, .data$birth_year == 19)
-```
-
----
-
-##### Your turn
-
-Here, we will fortify the example from before, using the `.data` pronoun.
-
-1. Run the code as-is. It should work as expected.
-1. Change the left-side of filtering expression from `!!sym(input_name)` to `.data[[input_name]]`. Rerun the code, everything should work as you expect.
-1. Change `input_name <- "birth_year"` to `input_name <- "parsec"`, rerun the code. What happens?
-1. Uncomment the expression `parsec <- 12`, rerun the code. What happens now?
-
-```{r filter-mischeif-managed, exercise=TRUE}
-data <- starwars
-
-input_name <- "birth_year"
-input_value <- 19
-
-# parsec <- 12
-
-filter(data, !!sym(input_name) == !!input_value)
-```
-
-By using the `.data` pronoun, we can make sure that the expression makes sense in the context of the data, and return an informative error message if it does not.
-
----
-
-When we use tidyeval with dplyr functions, dplyr evaluates the expressions that you provide. It can be useful to keep in mind what the dplyr function is evaluating your expressions *to*. `filter()` evaluates its expressions to logical *values* - it wants `TRUE` or `FALSE`, so I think of `filter()` as wanting "valuey" expressions. Other dplyr functions may expect other types of expressions, let's look at some of those differences.   
-
-### "selecty" expressions
-
-There is a family of functions that use the [__tidyselect__](https://CRAN.R-project.org/package=tidyselect) package as their back-end; `dplyr::select()` is the most prominent. Other functions that use "selecty" expressions include `tidyr::gather()` and `dplyr::pull()`. They all work the same way because they all need to identify a set of columns within an existing data source.
-
-This excellent [tidyr article](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/) dives into the theory and design choices. There are two big points here:
-
-1. Selecty functions evaluate its expressions into integers that indicate column-positions in the data source.
-
-2. It is best-practice to provide expressions that make sense *only* in the data, not in the surrounding context.
-
-Let's look at some examples of these principles in action. The usual way to call a select function is just to use the bare column-names, which we now know as symbols. 
-
-##### Your turn
-
-1. Run the code as-is, noting the columns in the returned data frame.
-2. Comment out the first line of code, uncomment the second line, rerun the code block. Confirm that you get the same result. 
-
-```{r selecty-intro, exercise=TRUE}
-select(starwars, name, species : starships)
-# select(starwars, 1, 10 : 13)
-```
-
-If we want to insist that we look only in the data for the name (not a bad idea), we can use the `.data` pronoun:
-
-```{r eval=FALSE}
-select(starwars, .data$name, .data$species : .data$starships)
-```
-
-Here's where things can get potentially difficult. Let's say that you want to select from a column-position to until the last column. This works:
-
-```{r eval=FALSE}
-select(starwars, .data$name, .data$species : ncol(starwars))
-```
-
-But the expression `ncol(starwars)` refers to the context where `starwars` is found. Our best-practice with selecty functions is to refer *only* to the data. 
-
-The __tidyselect__ package gives us a solution, a helper function called `last_col()` (if functions had hex-stickers, I imagine this hex-sticker would feature a pint glass, but I digress).
-
-##### Your turn
-
-1. Run the code below, to set your expectations.
-2. Replace `.data$starships` with `last_col()`. Rerun the code block to confirm you get the same result.
-
-```{r selecty, exercise=TRUE}
-library("tidyselect")
-select(starwars, .data$name, .data$species : .data$starships)
-```
-
-### "namey" expressions
-
-Some dplyr functions, in addition to evaluating "valuey" expressions, assign column names. These include `mutate()`, `summarise()`, `transmute()`, and, optionally, `group_by()`.
-
-For an example, let's find the minimum `birth_year` for each species.
-
-```{r}
-starwars %>%
-  group_by(species) %>%
-  summarise(birth_year_min = min(birth_year, na.rm = TRUE)) 
-```
-
-Let's say we want to parameterise this, in case we want to do the same thing with `height`. Here's one way to do it:
-
-```{r}
-input_name <- "birth_year"
-
-name_new <- glue("{input_name}_min")
-
-starwars %>%
-  group_by(species) %>%
-  summarise(!!sym(name_new) := min(!!sym(input_name), na.rm = TRUE)) 
-```
-
-You can see there are a few things going on here:
-
-1. We create a new variable-name by appending `"_min"` to `input_name`. 
-
-2. We adapt the `summarise()` expression:
-
- - Note that it has both a left side (new name) and a right side (value). 
- - We can use our unquoting tools on both sides. 
- - However, the `=` operator does not support unquoting on the left-side, so we use the `:=` operator from the __rlang__ package - designed just for this purpose. 
-
-When composing "namey" expressions, keep in mind that we have to use `:=` operator if we evaluate anything on the left side (the name).
-
-One other point, because the left side is going to end up as a name, you can unquote a symbol, `!!sym(name_new)`, or a string, `!!name_new`.
-
-##### Your turn
-
-Evaluate this solution for yourself. 
-
-1. Run the original code, as-is.
-2. Adapt the solution shown above, using `input_name`, `name_new`, etc. Rerun the code to make sure it works for you.
-3. Try using `!!name_new` on the left side of the `:=` operator. Rerun the code.
-
-```{r namey-summarise, exercise=TRUE}
-starwars %>%
-  group_by(species) %>%
-  summarise(birth_year_min = min(birth_year, na.rm = TRUE)) 
-```
-
-For extra credit, wrap the call in `quo()` to see the instructions. For the purpose of seeing the instructions, you may wish to do something like `name_new <- glue("{input_name}_min") %>% as.character()`.
-
-Have fun!
-
-## Writing functions that use tidyeval
-
-In the previous section, we learned how to compose expressions for use with functions that use tidyeval; in this section, we try to complete that picture. Here, we will see how to write functions that use tidyeval.
-
-The overall goal is to write code, and to let your functions' users write code, that makes it clear what is intended to happen; that makes it unambiguous how an expression is to be evaluated.
-
-Recall our example where we filtered the `starwars` dataset based on a string and a numeric value.
-
-```{r filter-str-ex, eval=FALSE}
-data <- starwars
-input_name <- "birth_date"
-input_value <- 19
-
-filter(data, !!sym(input_name) == !!input_value)
-```
-
-Our first attempt at a function will wrap our existing functionality; it will take a data frame, a string that describes a variable in the data frame, and a value.  
+Action functions evaluate to a result; you may or may not be naming the result.
 
 #### Your turn
 
-Here's our function:
+If you had not read this section, would you think that `dplyr::group_by()` is a selection function or an action function?
 
-1. Run the code to make confirm it works as we expect.
-2. Run the code using different arguments, e.g. `filter_name_value(mtcars, "cyl", 6)`
+-   Run the code, as is.
+-   Modify the `group_by()` expression to read `group_by(species = glue("{species}oid"))`. Run the code again. What do you think?
 
-```{r filter-str-function, exercise=TRUE}
-filter_name_value <- function(data, input_name, input_value) {
-  dplyr::filter(data, !!sym(input_name) == !!input_value)  
-}
-
-filter_name_value(starwars, "birth_year", 19)
-```
-
-### Quosures
-
-The function above works like we expect, but it does not yet "look-and-feel" like dplyr. For example, we would like to use a bare symbol, rather than a string to identify the variable.
-
-##### Your turn
-
-We have changed the function so that it takes a *quosure* instead of a *string*. Try out the following, then we will discuss what is going on.
-
-1. Run the code to confirm it works as we expect.
-2. Run the code using different arguments, e.g. `filter_quo_value(mtcars, quo(cyl), 6)`
-
-```{r filter-quo-function, exercise=TRUE}
-filter_quo_value <- function(data, input_quo, input_value) {
-  dplyr::filter(data, !!input_quo == !!input_value)  
-}
-
-filter_quo_value(starwars, quo(birth_year), 19)
-```
-
-This might be a good time to discuss symbols, expressions, and quosures a little more:
-
-- A **symbol** is an atomic component of an **expression**; a symbol represents an object.
-
-- An **expression** is a set of instructions to be evaluated.
-
-- A **quosure** is an **expression** that carries with it the environment (the context) where it was created.
-
-Perhaps it can be useful to think of an expression as a set of instructions. In this way, a symbol can be thought of as a word within a set of instructions. Similarly, a quosure is an expression (set of instructions) that carries with it the context in which is was created (think of the context as a set of materials). By capturing the environment where it was created, we can be sure that the quosure will be evaluated using the "correct" values. 
-
-When we send `quo(birth_year)` to the function, we are *not* sending the value of `birth_year`. Instead, we are "quoting" `birth_year`, preserving it as an unevaluated expression, in this case, a symbol. 
-
-##### Your turn
-
-Let's step through what's happening in the example above:
-
-1. Run the code as-is, noting we have an emptyish print statement inside the function. We will quote-print things so we can "see" what `dplyr::filter()` "sees".
-2. Put the expression `input_quo` inside the `print(quo())`. Rerun. Why can't we use `input_quo` as is in the `dplyr::filter()` function? 
-3. Put the expression `!!input_quo` inside the `print(quo())`. Rerun. How is this more-useful to the `dplyr::filter()` function? 
-
-```{r filter-quo-function-2, exercise=TRUE}
-filter_quo_value <- function(data, input_quo, input_value) {
-  print(quo())
-  dplyr::filter(data, !!input_quo == !!input_value)  
-}
-
-filter_quo_value(starwars, quo(birth_year), 19)
-```
-
-
-For `dplyr::filter()` to be able to access the contents of `input_quo`, we have to unquote it (using !!). This exposes the expression inside, in this case the symbol `birth_year`. The `filter()` function recognizes the symbol `birth_year` as belonging to the data frame, then evaluates it in the context of the data frame.
-
----
-
-We are closer to the dplyr "look-and-feel", but we still have this `quo()` hanging around; it's not so convenient to remember to use when we call the function. It would be great if we our function could just handle the quoting for us (like dplyr does). This is the job of the `enquo()` function.
-
-We use `enquo()` in our function to capture the argument as a quosure. 
-
-##### Your turn
-
-Here, we have a new function that uses the `enquo()` to capture the argument and put it into a quosure.
-
-1. Run the code as-is to convince yourself "it works".
-2. Uncomment the expression `input_name <- "birth_year"`. Change the function call (not the function itself) so that it uses `input_name`. If you like, uncomment and use `print(quo())` to help you "see" what the function "sees".
-
-```{r filter-sym-value, exercise=TRUE}
-filter_sym_value <- function(data, input_sym, input_value) {
-  
-  input_sym <- enquo(input_sym)
-  
-  dplyr::filter(data, !!input_sym == !!input_value) 
-}
-
-# input_name <- "birth_year"
-# print(quo())
-
-filter_sym_value(starwars, birth_year, 19)
-```
-
-### Renaming variables
-
-Recall this exercise:
-
-```{r eval=FALSE}
-input_name <- "birth_year"
-
-name_new <- glue("{input_name}_min")
+```{r group-by-action, exercise=TRUE}
+library("dplyr")
+library("glue")
 
 starwars %>%
   group_by(species) %>%
-  summarise(!!sym(name_new) := min(!!sym(input_name), na.rm = TRUE)) 
+  count()
 ```
 
-##### Your turn
+Similarly, is `ggplot2::aes()` a selection function or an action function?
 
-Here, this is rewritten as function where we specify the variable that we minimise, `var_min`, and the variable that use for grouping, `var_group`.
+-   Run the code, as is.
+-   Modify the `aes()` expression to read `aes(x = height / 2, y = mass)`. Run the code again. What do you think?
 
-1. Run the code to confirm that this works.
+```{r aes-action, exercise=TRUE}
+library("ggplot2")
+library("dplyr")
 
-```{r renaming-variables, exercise=TRUE}
-summarise_min <- function(data, var_min, var_group) {
-  
-  var_group <- enquo(var_group)
-  var_min <- enquo(var_min)
-  
-  name_var_min <- quo_name(var_min)
-  name_var_new <- glue::glue("{name_var_min}_min")
-  
-  data %>%
-    dplyr::group_by(!!var_group) %>%
-    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
+ggplot(starwars, aes(x = height, y = mass)) +
+  geom_point()
+```
+
+------------------------------------------------------------------------
+
+When working with tidy evaluation, it's important to distinguish between selection-functions and action-functions.
+
+Remember, Tidyverse's default is to assume that a variable name refers to the data frame; if it does not exist there, it will look in the environment.
+Tidy evaluation gives you the tools to specify the context of variable-names.
+
+There are two basic models for passing variable-names to functions:
+
+-   **strings**: useful for Shiny apps and web-services, where names are passed around as strings.\
+-   **bare names**: useful for interactive R use, so that your function behaves like dplyr and ggplot2 functions.
+
+------------------------------------------------------------------------
+
+## Variables as strings
+
+In many cases, it is easier to work with functions that offer arguments as strings rather than as bare-names.
+This is case for Shiny apps, as well as for web-services.
+
+### Selection functions
+
+**Selection** functions are functions where we specify columns in an existing data frame.
+The Tidyverse's most prominent selection-function is `dplyr::select()`.
+
+#### Your turn
+
+Let's say we have a Shiny app with a data frame and a multi-select input for the names of columns you wish to select.
+
+It can be useful to write things up as functions so you can test them outside of Shiny; that's what we're doing here.
+To convert strings to a tidy-select specification, we can use `dplyr::all_of()`; if we want a more-tolerant function, we can use `dplyr::any_of()`.
+
+Run the code below to get a sense of what is going on:
+
+-   Try different values for `input_vars`.
+-   Try "illegal" values for `input_vars`, then, in the function replace `all_of()` with `any_of()`, and run again.
+
+```{r tidy-select, exercise=TRUE}
+str_select <- function(df, str_vars) {
+  dplyr::select(df, dplyr::all_of(str_vars))
 }
 
-summarise_min(starwars, birth_year, species)
+input_vars <- c("name", "height")
+
+str_select(starwars, input_vars)
 ```
 
-There are a couple of things to note here: 
+There's another reason to use the `all_of()` function:
 
-- We have introduced a new function from rlang, `quo_name()`. Its name suggests what it does, converts a quosure into a string. In our case, we use this to create our new variable-name.
+-   Run the following code as-is to find out why. What happened?
+-   Improve the function code by using `dplyr::all_of()`.
 
-- When we use `summarise()` to create our new variable in the data frame, we have to use `:=` because we have a "namey" expression where we are using unquoting (`!!`) to create the name.
-
-### Multiple variables
-
-Let's say we want to specify more than one grouping variable. In our function signature, we would have a `...` set of arguments to represent multiple expressions. The tidyeval framework has some tools for this situation.
-
-##### Your turn
-
-Here, this is rewritten as function where we specify the variable that we minimise, `var_min`, and the variables that use for grouping, `...`.
-
-1. Run the code to confirm that this works.
-
-```{r multiple-variables, exercise=TRUE}
-summarise_more_min <- function(data, var_min, ...) {
-  
-  var_group <- enquos(...)
-  var_min <- enquo(var_min)
-  
-  name_var_min <- rlang::quo_name(var_min)
-  name_var_new <- paste0(name_var_min, "_min")
-  
-  data %>%
-    dplyr::group_by(!!!var_group) %>%
-    dplyr::summarise(!!name_var_new := min(!!var_min, na.rm = TRUE))
+```{r tidy-select-beware, exercise=TRUE}
+str_select_new <- function(df, name) {
+  dplyr::select(df, name)
 }
 
-summarise_more_min(starwars, birth_year, species, hair_color)
+input_vars <- c("name", "height")
+
+str_select_new(starwars, input_vars)
 ```
 
-To capture a list of `...` expressions as quosures, we use the `enquos()` function, rather than the `enquo()` function. To unquote our list of quosures, we use `!!!`, rather than `!!`. As Hadley and Lionel [point out](https://dplyr.tidyverse.org/articles/programming.html#capturing-multiple-variables), think of `!!!` as containing the three dots of `...`.
+------------------------------------------------------------------------
 
-### Package considerations
+### Action functions
 
-As you know, coding conventions for a package function are a little different than for interactive programming. Most prominently, calls to functions in other packages specify the namespace, i.e. `dplyr::filter()` rather than `filter()`. For commonly-used fundamental functions, like `quo()` and `sym()`, from __rlang__, we can import these into the package itself, avoiding the need prepend with `rlang::`. For example, see [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R) in this package's R directory.  
+The other type of function that uses tidy evaluation is **action** functions; these are functions that act on columns of a data frame.
 
-The [__usethis__](http://usethis.r-lib.org) package makes it very easy for you to use tidyeval functions in your package-functions, _and_ pass R CMD CHECK. For this package, I used the `use_tidyeval()` function to generate [`utils-tidy-eval.R`](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/utils-tidy-eval.R). As you can see, it imports and re-exports a lot of rlang functions - only a few of which we have been able to cover here.
+The first part of our strategy is to use subsetting.
+These dplyr statements are equivalent:
 
-To demonstrate that you can use these steps to write a function that works and passes R CMD CHECK, I have included a function `ex_filter_name_value()` in this package, you can inspect it [here](https://github.com/ijlyttle/learnr.tidyeval/blob/master/R/example-filter.R). 
+``` {.r}
+filter(starwars, species == "Droid")
+filter(starwars, starwars$species == "Droid")
+```
+
+If you wanted subset according to a variable:
+
+``` {.r}
+str_var <- "species"
+
+filter(starwars, starwars[[str_var]] == "Droid")
+```
+
+Finally, it can be handy to use the `.data` pronoun, so that you don't have to repeat the name of the data frame.
+
+``` {.r}
+filter(starwars, .data[[str_var]] == "Droid")
+```
+
+#### Your turn
+
+This function does not work as intended:
+
+-   modify the body of the function to use the `.data` pronoun.
+-   call the function using different inputs to make sure it works.
+
+```{r filter-string, exercise=TRUE}
+str_filter <- function(df, str_var, value) {
+  dplyr::filter(df, str_var == value)
+}
+
+str_filter(starwars, "species", "Droid")
+```
+
+------------------------------------------------------------------------
+
+#### Your turn
+
+There is still a way for something strange to happen; consider this function:
+
+-   Why does this not work as you expect? Hint: look at the column names in `starwars`.
+
+```{r filter-string-bang-bang, exercise=TRUE}
+str_filter <- function(df, str_var, name) {
+  dplyr::filter(df, .data[[str_var]] == name)
+}
+
+str_filter(starwars, "species", "Droid")
+```
+
+The variable `name` exists among the columns of `starwars`.
+If you tried `str_filter(mtcars, "cyl", 6)`, it would work fine.
+However, when you write a function - it needs to work *all* the time, not *most* of the time and fail mysteriously *some* of the time.
+
+The tidy evaluation framework provides a solution, the **bang-bang** operator: `!!`.
+In the context of tidy-evaluation functions, this means: "You evaluate, you evaluate NOW!".
+When `!!` is used, it does not delay the evaluation to check to see if the name exists in the data frame.
+
+-   In the `str_filter` function above, rewrite the filtering expression as `.data[[str_var]] == !!name`. Does it work now?
+
+------------------------------------------------------------------------
+
+You may be familiar with the `aes_string()` function in ggplot2; it is used to specify aesthetics using strings rather than bare-names.
+The `aes_string()` function is soft-deprecated; tidy evaluation offers a new way do this with the `aes()` function, using pronouns.
+
+For example, instead of `aes_string(x = "wt", y = "mpg")`, you can write `aes(x = .data[["wt"]], y = .data[["mpg"]])`.
+
+#### Your turn
+
+Adapt the `str_scatterplot()` function to use `ggplot2::aes()` with the `.data` pronoun:
+
+```{r scatter-string, exercise=TRUE}
+str_scatterplot <- function(df, str_var_x, str_var_y) {
+  ggplot2::ggplot(df, ggplot2::aes_string(x = str_var_x, y = str_var_y)) +
+    ggplot2::geom_point()
+}
+
+str_scatterplot(starwars, "height", "mass")
+```
+
+------------------------------------------------------------------------
+
+### Action functions with naming
+
+With action functions sometimes you want to be able to specify the *new* name in a data frame.
+With tidy evaluation, there are two things to do:
+
+-   Use the `:=` operator (from **rlang**) to assign the name.
+-   Specify the name itself using `glue::glue()` syntax.
+-   For example: `"{ str_name }" := ...`
+
+#### Your turn
+
+The goal of this function is to group a data frame **by** a variable, then to summarize using the **mean** of another variable:
+
+-   Make sure this function works as you expect.
+-   Change the left-side of the `summarise()` expression, `mean =`, to use the value of `str_mean`.
+-   Further change the left-side of this expression so that if `str_mean` is `"height"` the new variable is named `"height_mean"`.
+
+```{r naming-str, exercise=TRUE}
+str_mean_by <- function(df, str_by, str_mean) {
+  df %>%
+    dplyr::group_by(.data[[str_by]]) %>%
+    dplyr::summarise(mean = mean(.data[[str_mean]]))
+}
+
+str_mean_by(starwars, "species", "height")
+```
+
+### Using in packages
+
+In all the code above I was explicit about the package used for each function, e.g. `dplyr::filter()`.
+To pass `R CMD CHECK`, you need to be explicit about functions used from other packages unless you otherwise import them.
+
+As a rule, I like to be explicit so that someone (perhaps future me) has no doubt about which function I am referring to.
+However, for some functions, particularly operators (e.g. `%>%`), should be imported into your package.
+
+There are a couple of ways to do this:
+
+-   you can do this yourself, by adding code like this to a prominent R file in your package, perhaps `utils.R`:
+
+    ``` {.r}
+    #' @importFrom rlang .data !! :=
+    #' @importFrom tidyselect all_of any_of
+    #' @importFrom magrittr %>%
+    NULL
+    ```
+
+-   you can use command-line functions from **usethis**:
+
+    -   [`usethis::use_pipe()`](https://usethis.r-lib.org/reference/use_pipe.html) to import (and optionally export) the `%>%` operator.
+    -   [`usethis::use_tidy_eval()`](https://usethis.r-lib.org/reference/tidyverse.html) to import the rlang "stuff". Be warned that this will also import a whole lot more "stuff", the advanced tidy-evaluation functions.
+    -   you're still on your own for the tidyselect functions `all_of()` and `any_of()`.
+
+These will let you use the pronouns, etc., conveniently and keep you legal with `R CMD CHECK`.
+
+## Variables as bare names
+
+If you are writing functions for interactive R use, you may want them to have the same look-and-feel as Tidyverse functions.
+This means referring to data-frame columns using bare names.
+
+The idea is the same as for string-based functions: we need to be unambiguous about the context of names -- data-frame or environment.
+The techniques are slightly different.
+
+Here, we will recreate our functions from the previous section, but use bare names instead of strings.
+
+### Selection functions
+
+As a reminder, **selection** functions are functions where we specify columns in an existing data frame, e.g. `dplyr::select()`.
+
+#### Your turn
+
+Let's say that we want to pass bare-names on to a select function.
+
+We are going to adapt the string-variable function:
+
+-   Let's try the pass-the-dots strategy:
+
+    -   in the function signature, use `...` instead of `str_vars`.
+    -   in `dplyr::select()`, use `...` instead of `all_of(str_vars)`.
+
+-   Comment and uncomment to try the other function calls.
+    Is it working as you expect?
+
+```{r tidy-select-bare, exercise=TRUE}
+bare_select <- function(df, str_vars) {
+  dplyr::select(df, all_of(str_vars))
+}
+
+bare_select(starwars, height, mass)
+# bare_select(starwars, c(height, mass))
+# bare_select(starwars, height:birth_year)
+# bare_select(starwars, contains("_"))
+```
+
+Passing-the-dots is the simplest way that will work, most of the time.
+
+There is another way to do much the same thing, but will work if you have more than one place to send your arguments: "embrace the arguments".
+Instead of invoking the dots in the `dplyr::select()` function, you wrap a named argument in `{{}}`, e.g. `{{ vars }}`.
+
+Let's adapt the string-variable function:
+
+-   This time using the "embrace the arguments" technique:
+
+    -   in the function signature, replace `str_vars` with `vars`.
+    -   in the `dplyr::select()` function, replace `all_of(str_vars)` with `{{ vars }}`.
+
+-   Comment and uncomment to try the other function calls.
+
+    -   is it working as you expect?
+    -   why does the last one not work?
+
+```{r tidy-select-bare-2, exercise=TRUE}
+bare_select <- function(df, str_vars) {
+  dplyr::select(df, all_of(str_vars))
+}
+
+bare_select(starwars, height)
+# bare_select(starwars, c(height, mass))
+# bare_select(starwars, height:birth_year)
+# bare_select(starwars, contains("_"))
+
+# this one won't work - why?
+# bare_select(starwars, height, mass)
+```
+
+------------------------------------------------------------------------
+
+The `{{}}` operator (the Tidyverse team calls it "curly curly") is interpreted by Tidyverse functions as:
+
+-   do not evaluate the contents just yet.
+-   when you *do* evaluate the contents, interpret them in the context of the data-frame.
+
+If you are familiar with earlier versions of tidy evaluation, `{{ vars }}` is equivalent to `!!enquo(vars)`.
+The `!!enquo()` way still works and will continue to work (try it out if you like).
+That said, I think the `{{}}` notation is cleaner, and it helps my mental model to reserve `!!` for evaluating variables in the environment.
+
+### Action functions
+
+You will remember **action** functions; these are functions that act on columns of a data frame.
+
+Again, our goal is to write functions to be unambiguous as to how to evaluate a variable: in the context of the data-frame or the environment.
+
+-   to evaluate in the data-frame, use `{{}}`.
+-   to evaluate in the environment, use `!!`.
+
+#### Your turn
+
+Let's start again with the string-variable function, and change it to a bare-name function:
+
+-   in the function signature, change `str_var` to `var`.
+-   in the `dplyr::filter()` call, change `.data[[str_var]]` to `{{ var }}`.
+-   try it out!
+
+```{r filter-bare, exercise=TRUE}
+bare_filter <- function(df, str_var, value) {
+  dplyr::filter(df, .data[[str_var]] == !!value)
+}
+
+bare_filter(starwars, species, "Droid")
+```
+
+If you are evaluating a variable not in the context of a data frame, be sure to insist it be evaluated immediately by using the `!!` operator.
+
+We saw this [trap](https://www.youtube.com/watch?v=4F4qzPbcFiA) in the previous section.
+
+```{r filter-bare-bang-bang, exercise=TRUE}
+bare_filter <- function(df, var, name) {
+  dplyr::filter(df, {{ var }} == name)
+}
+
+bare_filter(starwars, species, "Droid")
+```
+
+The variable `name` exists among the columns of `starwars`.
+If you tried `bare_filter(mtcars, cyl, 6)`, it would work fine.
+
+-   In the `bare_filter` function above, rewrite the filtering expression as `{{ var }} == !!name`. Does it work now?
+
+------------------------------------------------------------------------
+
+#### Your turn
+
+Let's revisit the `ggplot::aes()` problem.
+Adapt the `bare_scatterplot()` function to use `ggplot2::aes()` with bare names:
+
+-   in the function signature, replace `str_var_x` and `str_var_y` with `var_x` and `var_y`.
+-   in the `ggplot2::aes()` call, replace `.data[[str_var_x]]` with `{{ var_x }}`.
+-   in the `ggplot2::aes()` call, replace `.data[[str_var_y]]` with `{{ var_y }}`.
+-   try it out!
+
+```{r scatter-bare, exercise=TRUE}
+bare_scatterplot <- function(df, str_var_x, str_var_y) {
+  ggplot2::ggplot(df, ggplot2::aes(x = .data[[str_var_x]], y = .data[[str_var_y]])) +
+    ggplot2::geom_point()
+}
+
+bare_scatterplot(starwars, height, mass)
+
+# verify that `ggplot2::aes()` is an action function
+# bare_scatterplot(starwars, height / 2, mass)
+```
+
+------------------------------------------------------------------------
+
+### Action functions with naming
+
+For bare-name functions, assigning a name to a data-frame is almost exactly the same as for string-variable functions:
+
+-   Use the `:=` operator (from **rlang**) to assign the name.
+-   Specify the name itself using the curly-curly syntax **in quotes**.
+-   For example: `"{{ name }}" := ...`
+
+The only difference from string-variable functions is to use curly-curly instead of single-curly.
+
+#### Your turn
+
+The goal of this function is to group a data frame **by** a variable, then to summarize using the **mean** of another variable:
+
+-   Make sure this function works as you expect.
+-   Change the left-side of the `summarise()` expression, `mean =` so that it uses the value of `var`.
+-   Further change the left-side of this expression so that if `var` is `height`, the new variable is named `"height_mean"`.
+
+```{r naming-bare, exercise=TRUE}
+bare_mean_by <- function(df, by, var) {
+  df %>%
+    dplyr::group_by({{ by }}) %>%
+    dplyr::summarise(mean = mean({{ var }}))
+}
+
+bare_mean_by(starwars, species, height)
+```
 
 ## More stuff
 
-Hopefully, you have been able to use this tutorial to get a sense of tidyeval principles and tools. I would encourage you to go through these references by the tidyeval architects. You can use these to deepen your knowledge, and introduce yourself to the supporting theory:
+As I said in the introduction, this tutorial is focused on the practical aspects of tidy evaluation: what you need to know to write package-ready functions for Shiny apps or interactive use.
 
-- [Programming with dplyr](http://dplyr.tidyverse.org/articles/programming.html)
-- [Tidy evaluation](https://tidyeval.tidyverse.org/)
-- [Erratum tidyr 0.7.0](https://www.tidyverse.org/articles/2017/09/erratum-tidyr-0.7.0/)
-- [Tidy evaluation in ggplot2](https://www.tidyverse.org/articles/2018/07/ggplot2-tidy-evaluation/)
+Someday I'd like to write another tidy-evaluation tutorial -- focused on the theory and building-blocks.
+I imagine that it would be based on the [Metaprogramming chapter](https://adv-r.hadley.nz/metaprogramming.html) of Hadley Wickham's Advanced R, and this video he made:
 
-There are also a lot of resources appearing on around the internet, produced by other R users who are also wrapping their heads around tidyeval; fortunately "tidyeval" is a very Google-friendly term.
+```{r tidy-eval-video-hadley, echo=FALSE}
+embed_url("https://www.youtube.com/watch?v=nERXS3ssntw") %>% 
+  use_align("center")
+```
 
+This is a five-minute video, but it will take me considerably longer to unpack it :)
