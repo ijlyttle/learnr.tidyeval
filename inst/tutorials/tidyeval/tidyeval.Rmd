@@ -553,7 +553,10 @@ Passing-the-dots is the simplest way that will work, most of the time.
 There is another way to do much the same thing, but will work if you have more than one place to send your arguments: "embrace the arguments".
 Instead of invoking the dots in the `dplyr::select()` function, you wrap a named argument in `{{}}`, e.g. `{{ vars }}`.
 
-Let's adapt the string-variable function:
+In the context of this tutorial, `str_vars` refers to variable names as strings, e.g. `"height"`; `vars` refers to bare variable-names, e.g. `height`.
+Importantly, this tutorial's use of `vars` as a variable name should not be confused with the function `dplyr::vars()`, which has been obviated by [`dplyr::across()`](https://dplyr.tidyverse.org/reference/vars.html).
+
+Let's adapt the string-variable function.
 
 -   This time using the "embrace the arguments" technique:
 

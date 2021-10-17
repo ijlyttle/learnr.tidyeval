@@ -546,7 +546,8 @@ bare_select(starwars, height, mass)
 </div>
 <p>Passing-the-dots is the simplest way that will work, most of the time.</p>
 <p>There is another way to do much the same thing, but will work if you have more than one place to send your arguments: “embrace the arguments”. Instead of invoking the dots in the <code>dplyr::select()</code> function, you wrap a named argument in <code>{{}}</code>, e.g. <code>{{ vars }}</code>.</p>
-<p>Let’s adapt the string-variable function:</p>
+<p>In the context of this tutorial, <code>str_vars</code> refers to variable names as strings, e.g. <code>"height"</code>; <code>vars</code> refers to bare variable-names, e.g. <code>height</code>. Importantly, this tutorial’s use of <code>vars</code> as a variable name should not be confused with the function <code>dplyr::vars()</code>, which has been obviated by <a href="https://dplyr.tidyverse.org/reference/vars.html"><code>dplyr::across()</code></a>.</p>
+<p>Let’s adapt the string-variable function.</p>
 <ul>
 <li><p>This time using the “embrace the arguments” technique:</p>
 <ul>
